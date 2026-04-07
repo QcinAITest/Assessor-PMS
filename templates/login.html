@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In – QCI Performance Management System</title>
+    <!-- Dark mode applied before first paint -->
+    <script>
+        (function() {
+            const saved = localStorage.getItem('qci_dark');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (saved === '1' || (saved === null && prefersDark)) {
+                document.documentElement.classList.add('dark');
+            }
+        })();
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: { extend: { colors: { qci: { blue: '#1a3a5c', gold: '#c5961a', accent: '#2563eb' } } } }
+        }
+    </script>
+    <style>[x-cloak]{display:none!important}</style>
+</head>
+<body class="h-full bg-gradient-to-br from-qci-blue to-blue-900 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center min-h-screen transition-colors duration-200">
+
+<!-- Dark mode toggle (floating) -->
+<button onclick="toggleDark()" id="dark-toggle"
+        class="fixed top-4 right-4 z-50 w-9 h-9 flex items-center justify-center rounded-lg bg-white bg-opacity-15 hover:bg-opacity-25 text-white transition"
+        title="Toggle dark mode">
+    <svg id="icon-moon" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+    </svg>
+    <svg id="icon-sun" class="w-5 h-5 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+    </svg>
+</button>
+
+<div x-data="loginApp()" x-cloak class="w-full max-w-md px-4">
+    <!-- Card -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden">
+        <!-- Header -->
+        <div class="bg-qci-blue px-8 py-8 text-center">
+            <div class="w-16 h-16 bg-qci-gold rounded-xl flex items-center justify-center mx-auto mb-4">
+                <span class="text-white font-bold text-2xl">Q</span>
+            </div>
+            <h1 class="text-white font-bold text-xl">QCI Performance Management</h1>
+            <p class="text-blue-300 text-sm mt-1">Sign in to your account</p>
+        </div>
+
+        <!-- Form -->
+        <div class="px-8 py-8">
+            <div class="space-y-5">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Email address</label>
+                    <input x-model="email" type="email" autocomplete="email"
+                           @keyup.enter="login()"
+                           placeholder="you@qci.org.in"
+                           class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-qci-accent focus:border-transparent outline-none transition">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Password</label>
+                    <input x-model="password" type="password" autocomplete="current-password"
+                           @keyup.enter="login()"
+                           placeholder="••••••••"
+                           class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-qci-accent focus:border-transparent outline-none transition">
+                </div>
+
+                <!-- Error -->
+                <div x-show="error" class="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg px-4 py-3 flex items-center space-x-2">
+                    <svg class="w-4 h-4 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                    </svg>
+                    <span class="text-sm text-red-700 dark:text-red-400" x-text="error"></span>
+                </div>
+
+                <button @click="login()" :disabled="loading"
+                        class="w-full bg-qci-accent text-white font-semibold py-2.5 rounded-lg hover:bg-blue-700 transition disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center space-x-2">
+                    <svg x-show="loading" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                    </svg>
+                    <span x-text="loading ? 'Signing in…' : 'Sign in'"></span>
+                </button>
+            </div>
+
+            <p class="text-center text-xs text-gray-400 dark:text-gray-500 mt-6">
+                Quality Council of India · Unified Performance Management System
+            </p>
+        </div>
+    </div>
+
+    <!-- Dev credentials quick-fill -->
+    <div class="mt-5 bg-white bg-opacity-10 dark:bg-gray-800 dark:bg-opacity-60 rounded-xl p-4 border border-white border-opacity-20 dark:border-gray-700">
+        <p class="text-xs text-blue-200 dark:text-gray-400 font-semibold mb-3 uppercase tracking-wide">Dev / Testing Credentials</p>
+        <div class="space-y-2">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-medium text-white">System Admin</p>
+                    <p class="text-xs text-blue-300 dark:text-gray-400">admin@qci.org.in</p>
+                </div>
+                <button @click="fill('admin@qci.org.in', 'Admin@123')"
+                        class="text-xs bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-3 py-1.5 rounded-lg transition font-medium">
+                    Fill
+                </button>
+            </div>
+            <div class="border-t border-white border-opacity-10 dark:border-gray-700"></div>
+            <template x-for="cred in boardCreds" :key="cred.email">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-medium text-white" x-text="cred.label"></p>
+                        <p class="text-xs text-blue-300 dark:text-gray-400" x-text="cred.email"></p>
+                    </div>
+                    <button @click="fill(cred.email, 'BoardAdmin@123')"
+                            class="text-xs bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-3 py-1.5 rounded-lg transition font-medium">
+                        Fill
+                    </button>
+                </div>
+            </template>
+        </div>
+    </div>
+</div>
+
+<script>
+function loginApp() {
+    return {
+        email: '', password: '', error: '', loading: false,
+
+        boardCreds: [
+            { label: 'NABL Board Admin',  email: 'nabl.admin@qci.org.in' },
+            { label: 'NABH Board Admin',  email: 'nabh.admin@qci.org.in' },
+            { label: 'NABCB Board Admin', email: 'nabcb.admin@qci.org.in' },
+            { label: 'NABET Board Admin', email: 'nabet.admin@qci.org.in' },
+        ],
+
+        fill(email, password) {
+            this.email = email;
+            this.password = password;
+            this.error = '';
+        },
+
+        async login() {
+            this.error = '';
+            if (!this.email || !this.password) {
+                this.error = 'Please enter your email and password.';
+                return;
+            }
+            this.loading = true;
+            try {
+                const res = await fetch('/api/v1/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: this.email, password: this.password }),
+                });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    this.error = err.detail || 'Invalid credentials.';
+                    return;
+                }
+                const data = await res.json();
+                localStorage.setItem('qci_token', data.access_token);
+                localStorage.setItem('qci_user', JSON.stringify(data.user));
+
+                if (data.user.role === 'SYSTEM_ADMIN') {
+                    window.location.href = '/sysadmin';
+                } else {
+                    const boardCode = await this._getBoardCode(data.user.board_id, data.access_token);
+                    window.location.href = '/board/' + boardCode;
+                }
+            } catch (e) {
+                this.error = 'Network error. Please try again.';
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        async _getBoardCode(boardId, token) {
+            if (!boardId) return '';
+            const res = await fetch('/api/v1/boards/' + boardId, {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            if (!res.ok) return '';
+            const b = await res.json();
+            return b.code || '';
+        }
+    };
+}
+
+function toggleDark() {
+    const html = document.documentElement;
+    const isDark = html.classList.toggle('dark');
+    localStorage.setItem('qci_dark', isDark ? '1' : '0');
+    document.getElementById('icon-moon').classList.toggle('hidden', isDark);
+    document.getElementById('icon-sun').classList.toggle('hidden', !isDark);
+}
+// Sync icon on load
+(function() {
+    const isDark = document.documentElement.classList.contains('dark');
+    document.getElementById('icon-moon').classList.toggle('hidden', isDark);
+    document.getElementById('icon-sun').classList.toggle('hidden', !isDark);
+})();
+</script>
+</body>
+</html>

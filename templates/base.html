@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}QCI Performance Management System{% endblock %}</title>
+    <!-- Dark mode applied before first paint to prevent flash -->
+    <script>
+        (function() {
+            const saved = localStorage.getItem('qci_dark');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (saved === '1' || (saved === null && prefersDark)) {
+                document.documentElement.classList.add('dark');
+            }
+        })();
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        qci: { blue: '#1a3a5c', gold: '#c5961a', light: '#f0f4f8', accent: '#2563eb' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        [x-cloak] { display: none !important; }
+        .star-filled { color: #c5961a; }
+        .star-empty  { color: #d1d5db; }
+        .dark .star-empty { color: #6b7280; }
+    </style>
+</head>
+<body class="h-full bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+
+<!-- Auth guard: redirect to /login if no token -->
+<script>
+    (function() {
+        const token = localStorage.getItem('qci_token');
+        if (!token && window.location.pathname !== '/login') {
+            window.location.href = '/login';
+        }
+    })();
+    window.__qciUser = (function() {
+        try { return JSON.parse(localStorage.getItem('qci_user') || '{}'); } catch { return {}; }
+    })();
+</script>
+
+<div class="min-h-full">
+    <!-- Navigation -->
+    <nav class="bg-qci-blue shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <!-- Logo + nav links -->
+                <div class="flex items-center space-x-4 min-w-0">
+                    <a href="/" class="flex items-center space-x-3 flex-shrink-0">
+                        <div class="w-10 h-10 bg-qci-gold rounded-lg flex items-center justify-center flex-shrink-0">
+                            <span class="text-white font-bold text-lg">Q</span>
+                        </div>
+                        <div class="hidden sm:block">
+                            <span class="text-white font-semibold text-lg">QCI</span>
+                            <span class="text-gray-300 text-sm ml-1">Performance Management</span>
+                        </div>
+                    </a>
+                    <a id="nav-sysadmin" href="/sysadmin"
+                       class="hidden text-gray-300 hover:text-white text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-white hover:bg-opacity-10 transition whitespace-nowrap">
+                        System Admin
+                    </a>
+                </div>
+
+                <!-- Right side: dark mode toggle + user info + logout -->
+                <div class="flex items-center space-x-2 sm:space-x-4">
+                    <!-- Dark mode toggle -->
+                    <button id="dark-toggle" onclick="toggleDark()"
+                            class="w-9 h-9 flex items-center justify-center rounded-lg text-gray-300 hover:text-white hover:bg-white hover:bg-opacity-10 transition flex-shrink-0"
+                            title="Toggle dark mode">
+                        <!-- Moon icon (shown in light mode) -->
+                        <svg id="icon-moon" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+                        </svg>
+                        <!-- Sun icon (shown in dark mode) -->
+                        <svg id="icon-sun" class="w-5 h-5 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+                        </svg>
+                    </button>
+
+                    <!-- User info (hidden on very small screens, shown sm+) -->
+                    <div id="nav-user" class="hidden items-center space-x-3">
+                        <div class="text-right hidden sm:block">
+                            <p id="nav-user-name" class="text-white text-sm font-medium leading-tight"></p>
+                            <p id="nav-user-role" class="text-gray-300 text-xs leading-tight"></p>
+                        </div>
+                        <div id="nav-user-avatar"
+                             class="w-8 h-8 rounded-full bg-qci-gold flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                        </div>
+                    </div>
+                    <button onclick="logout()"
+                            class="text-gray-300 hover:text-white text-sm px-2 sm:px-3 py-1.5 rounded-lg hover:bg-white hover:bg-opacity-10 transition whitespace-nowrap">
+                        Sign out
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        {% block content %}{% endblock %}
+    </main>
+</div>
+
+<script>
+    // Populate nav from stored user
+    (function() {
+        const u = window.__qciUser;
+        if (u && u.full_name) {
+            const nameEl   = document.getElementById('nav-user-name');
+            const roleEl   = document.getElementById('nav-user-role');
+            const avatarEl = document.getElementById('nav-user-avatar');
+            const userDiv  = document.getElementById('nav-user');
+            const sysLink  = document.getElementById('nav-sysadmin');
+            if (nameEl)   nameEl.textContent  = u.full_name;
+            if (roleEl)   roleEl.textContent  = u.role === 'SYSTEM_ADMIN' ? 'System Admin' : 'Board Admin';
+            if (avatarEl) avatarEl.textContent = (u.full_name || '?')[0].toUpperCase();
+            if (userDiv)  userDiv.classList.replace('hidden', 'flex');
+            if (sysLink && u.role === 'SYSTEM_ADMIN') sysLink.classList.remove('hidden');
+        }
+    })();
+
+    // Dark mode toggle
+    function toggleDark() {
+        const html = document.documentElement;
+        const isDark = html.classList.toggle('dark');
+        localStorage.setItem('qci_dark', isDark ? '1' : '0');
+        document.getElementById('icon-moon').classList.toggle('hidden', isDark);
+        document.getElementById('icon-sun').classList.toggle('hidden', !isDark);
+    }
+    // Sync icon with current state on load
+    (function() {
+        const isDark = document.documentElement.classList.contains('dark');
+        document.getElementById('icon-moon').classList.toggle('hidden', isDark);
+        document.getElementById('icon-sun').classList.toggle('hidden', !isDark);
+    })();
+
+    function logout() {
+        localStorage.removeItem('qci_token');
+        localStorage.removeItem('qci_user');
+        window.location.href = '/login';
+    }
+
+    const api = {
+        _headers() {
+            const token = localStorage.getItem('qci_token');
+            return {
+                'Content-Type': 'application/json',
+                ...(token ? { 'Authorization': 'Bearer ' + token } : {}),
+            };
+        },
+        async _handle(res) {
+            if (res.status === 401) { logout(); return; }
+            if (!res.ok) {
+                const body = await res.text();
+                let msg = body;
+                try { const j = JSON.parse(body); msg = j.detail || body; } catch (_) {}
+                const err = new Error(msg);
+                err.status = res.status;
+                throw err;
+            }
+            if (res.status === 204) return null;
+            return res.json();
+        },
+        async get(url)         { return this._handle(await fetch(url, { headers: this._headers() })); },
+        async post(url, data)  { return this._handle(await fetch(url, { method: 'POST',   headers: this._headers(), body: JSON.stringify(data) })); },
+        async put(url, data)   { return this._handle(await fetch(url, { method: 'PUT',    headers: this._headers(), body: JSON.stringify(data) })); },
+        async patch(url, data) { return this._handle(await fetch(url, { method: 'PATCH',  headers: this._headers(), body: JSON.stringify(data) })); },
+        async del(url)         { return this._handle(await fetch(url, { method: 'DELETE', headers: this._headers() })); },
+    };
+
+    const currentUser  = window.__qciUser || {};
+    const isSysAdmin   = currentUser.role === 'SYSTEM_ADMIN';
+    const isBoardAdmin = currentUser.role === 'BOARD_ADMIN';
+
+    function starHtml(rating, max = 5) {
+        let html = '';
+        for (let i = 1; i <= max; i++) {
+            html += i <= rating
+                ? '<span class="star-filled text-lg">&#9733;</span>'
+                : '<span class="star-empty text-lg">&#9733;</span>';
+        }
+        return html;
+    }
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

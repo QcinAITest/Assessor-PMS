@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feedback Form – QCI Performance Management</title>
+    <!-- Dark mode applied before first paint -->
+    <script>
+        (function() {
+            const saved = localStorage.getItem('qci_dark');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (saved === '1' || (saved === null && prefersDark)) {
+                document.documentElement.classList.add('dark');
+            }
+        })();
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: { extend: { colors: { qci: { blue: '#1a3a5c', gold: '#c5961a', accent: '#2563eb' } } } }
+        }
+    </script>
+    <style>
+        [x-cloak]{display:none!important}
+        .rating-btn { transition: all 0.15s; }
+    </style>
+</head>
+<body class="min-h-full bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+
+<!-- Dark mode toggle (floating) -->
+<button onclick="toggleDark()" id="dark-toggle"
+        class="fixed top-4 right-4 z-50 w-9 h-9 flex items-center justify-center rounded-lg bg-white dark:bg-gray-700 shadow-md border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition"
+        title="Toggle dark mode">
+    <svg id="icon-moon" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+    </svg>
+    <svg id="icon-sun" class="w-5 h-5 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+    </svg>
+</button>
+
+<div x-data="publicForm('{{ token }}', {{ 'true' if preview_mode else 'false' }}, '{{ preview_board_code if preview_mode else '' }}', '{{ preview_form_id if preview_mode else '' }}')" x-init="init()" x-cloak>
+
+    <!-- Already submitted -->
+    <div x-show="alreadySubmitted" class="min-h-screen flex items-center justify-center px-4">
+        <div class="text-center max-w-sm">
+            <div class="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+            </div>
+            <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-2">Already Submitted</h2>
+            <p class="text-gray-500 dark:text-gray-400 text-sm">This feedback form has already been completed. Thank you for your response.</p>
+        </div>
+    </div>
+
+    <!-- Loading -->
+    <div x-show="loading && !alreadySubmitted" class="min-h-screen flex items-center justify-center">
+        <div class="text-center">
+            <svg class="animate-spin w-8 h-8 text-qci-accent mx-auto mb-3" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+            </svg>
+            <p class="text-gray-400 dark:text-gray-500 text-sm">Loading form…</p>
+        </div>
+    </div>
+
+    <!-- Success screen -->
+    <div x-show="submitted" class="min-h-screen flex items-center justify-center px-4">
+        <div class="text-center max-w-sm">
+            <div class="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+            </div>
+            <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-2">Thank You!</h2>
+            <p class="text-gray-500 dark:text-gray-400 text-sm">Your feedback has been submitted successfully. It will be used to evaluate the assessor's performance.</p>
+        </div>
+    </div>
+
+    <!-- Preview banner -->
+    <div x-show="previewMode && !loading" class="bg-amber-50 dark:bg-amber-900/30 border-b-2 border-amber-400 dark:border-amber-600 px-4 py-2.5">
+        <div class="max-w-2xl mx-auto flex items-center space-x-2 text-sm text-amber-800 dark:text-amber-300">
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+            </svg>
+            <span><strong>Preview Mode</strong> — This is a read-only preview. Responses cannot be submitted.</span>
+        </div>
+    </div>
+
+    <!-- The actual form -->
+    <div x-show="!loading && !alreadySubmitted && !submitted">
+        <!-- Header -->
+        <div class="bg-qci-blue text-white px-6 py-6">
+            <div class="max-w-2xl mx-auto">
+                <div class="flex items-center space-x-3 mb-3">
+                    <div class="w-8 h-8 bg-qci-gold rounded-lg flex items-center justify-center flex-shrink-0">
+                        <span class="text-white font-bold text-sm">Q</span>
+                    </div>
+                    <span class="text-blue-200 text-sm">Quality Council of India · Performance Management</span>
+                </div>
+                <h1 class="text-xl font-bold" x-text="form.form_name"></h1>
+                <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-sm text-blue-200">
+                    <div>Assessor: <span class="text-white font-medium" x-text="form.evaluee_name"></span></div>
+                    <div>Role: <span class="text-white font-medium" x-text="form.evaluee_role"></span></div>
+                    <div>Assessment: <span class="text-white font-medium" x-text="form.assessment_type"></span></div>
+                    <div x-show="form.organization_name">Organization: <span class="text-white font-medium" x-text="form.organization_name"></span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rating scale legend -->
+        <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+            <div class="max-w-2xl mx-auto px-6 py-3">
+                <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
+                    <span class="font-medium mr-1">Rating scale:</span>
+                    <template x-for="(label, i) in ['Poor', 'Fair', 'Good', 'Very Good', 'Excellent']" :key="i">
+                        <div class="flex items-center space-x-1">
+                            <span class="w-5 h-5 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center font-semibold text-gray-600 dark:text-gray-300" x-text="i+1"></span>
+                            <span x-text="label"></span>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+
+        <div class="max-w-2xl mx-auto px-4 py-6 space-y-6">
+
+            <!-- Competency sections -->
+            <template x-for="(param, pi) in form.parameters || []" :key="param.id">
+                <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                    <!-- Section header -->
+                    <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between"
+                         :class="sectionColors[pi % sectionColors.length]">
+                        <div class="flex items-center space-x-3">
+                            <span class="w-7 h-7 rounded-lg bg-white bg-opacity-30 flex items-center justify-center text-sm font-bold"
+                                  x-text="pi + 1"></span>
+                            <div>
+                                <h3 class="font-semibold text-sm" x-text="param.label"></h3>
+                                <span class="text-xs opacity-75" x-text="'Weight: ' + param.weight + '%'"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sub-parameters -->
+                    <div class="divide-y divide-gray-50 dark:divide-gray-700">
+                        <template x-for="(sub, si) in param.sub_parameters || []" :key="sub.id">
+                            <div class="px-5 py-4">
+                                <div class="flex items-start justify-between gap-4 flex-wrap sm:flex-nowrap">
+                                    <div class="flex-1 min-w-0">
+                                        <span class="text-sm text-gray-800 dark:text-gray-200 leading-relaxed" x-text="sub.label"></span>
+                                        <span x-show="sub.is_mandatory" class="ml-1 text-red-400 text-xs">*</span>
+                                    </div>
+
+                                    <!-- RATING_1_5 -->
+                                    <div x-show="sub.data_type === 'RATING_1_5'" class="flex space-x-1 flex-shrink-0">
+                                        <template x-for="n in [1,2,3,4,5]" :key="n">
+                                            <button @click="setResponse(sub.code, n)"
+                                                    class="w-9 h-9 rounded-lg border-2 text-sm font-bold transition-all"
+                                                    :class="responses[sub.code] === n
+                                                        ? 'border-qci-gold bg-qci-gold text-white'
+                                                        : 'border-gray-200 dark:border-gray-600 text-gray-400 dark:text-gray-500 hover:border-qci-gold hover:text-qci-gold'"
+                                                    x-text="n">
+                                            </button>
+                                        </template>
+                                    </div>
+
+                                    <!-- YES_NO -->
+                                    <div x-show="sub.data_type === 'YES_NO'" class="flex space-x-2 flex-shrink-0">
+                                        <button @click="setResponse(sub.code, 'YES')"
+                                                class="px-4 py-2 rounded-lg border-2 text-sm font-medium transition-all"
+                                                :class="responses[sub.code] === 'YES'
+                                                    ? 'border-green-500 bg-green-500 text-white'
+                                                    : 'border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-green-400'">
+                                            Yes
+                                        </button>
+                                        <button @click="setResponse(sub.code, 'NO')"
+                                                class="px-4 py-2 rounded-lg border-2 text-sm font-medium transition-all"
+                                                :class="responses[sub.code] === 'NO'
+                                                    ? 'border-red-500 bg-red-500 text-white'
+                                                    : 'border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-red-400'">
+                                            No
+                                        </button>
+                                    </div>
+
+                                    <!-- PERCENTAGE -->
+                                    <div x-show="sub.data_type === 'PERCENTAGE'" class="flex-shrink-0 w-full sm:w-28">
+                                        <div class="flex items-center space-x-1">
+                                            <input type="range" min="0" max="100" step="5"
+                                                   :value="responses[sub.code] || 0"
+                                                   @input="setResponse(sub.code, parseInt($event.target.value))"
+                                                   class="flex-1 accent-qci-gold">
+                                            <span class="text-sm font-semibold text-gray-700 dark:text-gray-300 w-10 text-right"
+                                                  x-text="(responses[sub.code] || 0) + '%'"></span>
+                                        </div>
+                                    </div>
+
+                                    <!-- TEXT -->
+                                    <div x-show="sub.data_type === 'TEXT'" class="flex-shrink-0 w-full sm:w-48">
+                                        <input type="text" :value="responses[sub.code] || ''"
+                                               @input="setResponse(sub.code, $event.target.value)"
+                                               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- No sub-params fallback: direct rating on parent -->
+                        <div x-show="!param.sub_parameters || param.sub_parameters.length === 0" class="px-5 py-4">
+                            <div class="flex justify-end space-x-1">
+                                <template x-for="n in [1,2,3,4,5]" :key="n">
+                                    <button @click="setResponse(param.code, n)"
+                                            class="w-9 h-9 rounded-lg border-2 text-sm font-bold transition-all"
+                                            :class="responses[param.code] === n
+                                                ? 'border-qci-gold bg-qci-gold text-white'
+                                                : 'border-gray-200 dark:border-gray-600 text-gray-400 dark:text-gray-500 hover:border-qci-gold hover:text-qci-gold'"
+                                            x-text="n">
+                                    </button>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </template>
+
+            <!-- Essential Criteria -->
+            <div x-show="(form.essential_criteria || []).length > 0"
+                 class="bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800 overflow-hidden">
+                <div class="px-5 py-4 bg-amber-100 dark:bg-amber-900/30 border-b border-amber-200 dark:border-amber-800">
+                    <h3 class="font-semibold text-amber-900 dark:text-amber-300 text-sm flex items-center space-x-2">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92z" clip-rule="evenodd"/>
+                        </svg>
+                        <span>Essential Criteria — Must be answered</span>
+                    </h3>
+                    <p class="text-xs text-amber-700 dark:text-amber-400 mt-1">A "No" answer will flag this assessor for immediate review.</p>
+                </div>
+                <div class="divide-y divide-amber-100 dark:divide-amber-800/50">
+                    <template x-for="ec in form.essential_criteria || []" :key="ec.code">
+                        <div class="px-5 py-4 flex items-center justify-between gap-4 flex-wrap sm:flex-nowrap">
+                            <span class="text-sm text-amber-900 dark:text-amber-300 flex-1" x-text="ec.label"></span>
+                            <div class="flex space-x-2 flex-shrink-0">
+                                <button @click="setResponse(ec.code, 'YES')"
+                                        class="px-4 py-2 rounded-lg border-2 text-sm font-medium transition-all"
+                                        :class="responses[ec.code] === 'YES'
+                                            ? 'border-green-500 bg-green-500 text-white'
+                                            : 'border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-400 hover:border-green-400'">Yes</button>
+                                <button @click="setResponse(ec.code, 'NO')"
+                                        class="px-4 py-2 rounded-lg border-2 text-sm font-medium transition-all"
+                                        :class="responses[ec.code] === 'NO'
+                                            ? 'border-red-500 bg-red-500 text-white'
+                                            : 'border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-400 hover:border-red-400'">No</button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Comments -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Additional Comments <span class="text-gray-400 dark:text-gray-500 font-normal">(optional)</span>
+                </label>
+                <textarea x-model="comments" rows="4"
+                          placeholder="Any additional observations or feedback about the assessor's performance…"
+                          class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-qci-accent focus:border-transparent outline-none resize-none">
+                </textarea>
+            </div>
+
+            <!-- Validation error -->
+            <div x-show="submitError" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-4 py-3 text-sm text-red-700 dark:text-red-400"
+                 x-text="submitError"></div>
+
+            <!-- Submit -->
+            <div class="pb-8">
+                <button @click="submitForm()" :disabled="submitting || previewMode"
+                        class="w-full font-semibold py-3.5 rounded-xl text-base transition disabled:opacity-60 flex items-center justify-center space-x-2"
+                        :class="previewMode ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed' : 'bg-qci-accent text-white hover:bg-blue-700'">
+                    <svg x-show="submitting" class="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                    </svg>
+                    <span x-text="previewMode ? 'Submit Feedback (Preview Only)' : submitting ? 'Submitting…' : 'Submit Feedback'"></span>
+                </button>
+                <p class="text-center text-xs text-gray-400 dark:text-gray-500 mt-3">
+                    Your response is confidential and used solely for performance evaluation.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function publicForm(token, previewMode, previewBoardCode, previewFormId) {
+    return {
+        token, previewMode: !!previewMode, form: {}, responses: {}, comments: '',
+        loading: true, submitted: false, alreadySubmitted: false,
+        submitting: false, submitError: '',
+        sectionColors: [
+            'bg-blue-50 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+            'bg-emerald-50 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
+            'bg-orange-50 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300',
+            'bg-purple-50 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
+            'bg-pink-50 text-pink-800 dark:bg-pink-900/30 dark:text-pink-300',
+            'bg-teal-50 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300',
+        ],
+
+        async init() {
+            try {
+                if (this.previewMode) {
+                    // Preview: load form directly from the board API (no token needed)
+                    const board = await fetch('/api/v1/boards/' + previewBoardCode).then(r => r.json());
+                    const ft = await fetch('/api/v1/boards/' + board.id + '/forms/' + previewFormId).then(r => r.json());
+                    this.form = {
+                        form_name: ft.name + ' (Preview)',
+                        form_code: ft.code,
+                        evaluee_name: 'Preview Mode',
+                        evaluee_role: ft.target_evaluator_role || '—',
+                        assessment_type: '—',
+                        organization_name: '',
+                        parameters: ft.parameters,
+                        essential_criteria: ft.essential_criteria,
+                    };
+                    this._initResponses(this.form);
+                } else {
+                    const res = await fetch('/api/v1/forms/' + token);
+                    const data = await res.json();
+                    if (data.already_submitted) {
+                        this.alreadySubmitted = true;
+                    } else {
+                        this.form = data;
+                        this._initResponses(data);
+                    }
+                }
+            } catch(e) {
+                this.submitError = 'Failed to load form.';
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        _initResponses(data) {
+            for (const p of data.parameters || []) {
+                for (const s of p.sub_parameters || []) {
+                    this.responses[s.code] = null;
+                }
+                if (!p.sub_parameters || p.sub_parameters.length === 0) {
+                    this.responses[p.code] = null;
+                }
+            }
+            for (const ec of data.essential_criteria || []) {
+                this.responses[ec.code] = null;
+            }
+        },
+
+        setResponse(code, value) {
+            this.responses = { ...this.responses, [code]: value };
+        },
+
+        async submitForm() {
+            this.submitError = '';
+            for (const ec of this.form.essential_criteria || []) {
+                if (this.responses[ec.code] === null || this.responses[ec.code] === undefined) {
+                    this.submitError = 'Please answer all Essential Criteria before submitting.';
+                    document.querySelector('[x-show="submitError"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    return;
+                }
+            }
+            this.submitting = true;
+            try {
+                const res = await fetch('/api/v1/forms/' + this.token + '/submit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ responses: this.responses, comments: this.comments }),
+                });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    this.submitError = err.detail || 'Submission failed. Please try again.';
+                    return;
+                }
+                this.submitted = true;
+            } catch(e) {
+                this.submitError = 'Network error. Please try again.';
+            } finally {
+                this.submitting = false;
+            }
+        },
+    };
+}
+
+function toggleDark() {
+    const html = document.documentElement;
+    const isDark = html.classList.toggle('dark');
+    localStorage.setItem('qci_dark', isDark ? '1' : '0');
+    document.getElementById('icon-moon').classList.toggle('hidden', isDark);
+    document.getElementById('icon-sun').classList.toggle('hidden', !isDark);
+}
+// Sync icon on load
+(function() {
+    const isDark = document.documentElement.classList.contains('dark');
+    document.getElementById('icon-moon').classList.toggle('hidden', isDark);
+    document.getElementById('icon-sun').classList.toggle('hidden', !isDark);
+})();
+</script>
+</body>
+</html>

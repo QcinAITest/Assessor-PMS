@@ -1,0 +1,571 @@
+{% extends "base.html" %}
+{% block title %}Form Builder - QCI PMS{% endblock %}
+
+{% block content %}
+<div x-data="formBuilder('{{ board_code }}', '{{ form_id }}')" x-init="init()" x-cloak>
+    <!-- Breadcrumb -->
+    <nav class="mb-6 text-sm">
+        <a href="/" class="text-qci-accent hover:underline">Dashboard</a>
+        <span class="mx-2 text-gray-400 dark:text-gray-500">/</span>
+        <a :href="'/board/' + boardCode" class="text-qci-accent hover:underline" x-text="boardCode"></a>
+        <span class="mx-2 text-gray-400 dark:text-gray-500">/</span>
+        <span class="text-gray-700 dark:text-gray-300" x-text="form.name"></span>
+    </nav>
+
+    <!-- Form Header -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
+        <div class="flex items-start justify-between flex-wrap gap-3">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900 dark:text-white" x-text="form.name"></h1>
+                <div class="flex items-center space-x-4 mt-2 text-sm text-gray-500 dark:text-gray-400">
+                    <span>Weight: <strong class="dark:text-gray-300" x-text="((form.stakeholder_weight||0)*100)+'%'"></strong></span>
+                    <span :class="form.is_mandatory ? 'text-red-600 dark:text-red-400 font-medium' : 'text-gray-400 dark:text-gray-500'"
+                          x-text="form.is_mandatory ? 'Mandatory' : 'Optional'"></span>
+                </div>
+            </div>
+            <div class="flex items-center flex-wrap gap-3">
+                <a :href="'/board/' + boardCode + '/form/' + formId + '/preview'" target="_blank"
+                   class="inline-flex items-center space-x-1.5 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                    </svg>
+                    <span>Preview Form</span>
+                </a>
+                <span x-show="weightSum === 100" class="flex items-center space-x-1.5 text-xs text-green-600 dark:text-green-400 font-medium">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                    <span>Weights balanced</span>
+                </span>
+                <span x-show="weightSum > 0 && weightSum !== 100" class="flex items-center space-x-1.5 text-xs text-amber-600 dark:text-amber-400 font-medium">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                    <span x-text="weightSum + '% assigned — auto-normalized'"></span>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Parameters Panel (2/3) -->
+        <div class="lg:col-span-2 space-y-4">
+            <div class="flex justify-between items-center flex-wrap gap-3">
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Evaluation Criteria</h2>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Add the areas you want to evaluate. Each area can have specific questions under it.</p>
+                </div>
+                <button @click="openAddParam(null)"
+                        class="px-4 py-2 bg-qci-accent text-white text-sm font-medium rounded-lg hover:bg-blue-700 flex items-center space-x-1.5">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                    <span>Add Evaluation Area</span>
+                </button>
+            </div>
+
+            <!-- Weight Distribution Bar -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Weight Distribution</span>
+                    <div class="flex items-center space-x-3">
+                        <span class="text-sm" :class="weightSum === 100 ? 'text-green-600 dark:text-green-400 font-semibold' : 'text-amber-600 dark:text-amber-400 font-semibold'"
+                              x-text="weightSum + '% assigned'"></span>
+                        <span class="text-sm text-gray-400 dark:text-gray-500" x-show="weightRemaining > 0" x-text="'(' + weightRemaining + '% remaining)'"></span>
+                        <span class="text-sm text-red-500 dark:text-red-400 font-medium" x-show="weightSum > 100">Over by <span x-text="weightSum - 100"></span>%</span>
+                    </div>
+                </div>
+                <div class="flex h-5 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700">
+                    <template x-for="(p, i) in topParams" :key="p.id">
+                        <div class="flex items-center justify-center text-xs text-white font-medium transition-all"
+                             :style="'width: ' + p.weight + '%'"
+                             :class="paramColors[i % paramColors.length]"
+                             :title="p.label + ': ' + p.weight + '%'">
+                            <span x-text="p.weight + '%'" x-show="p.weight >= 10"></span>
+                        </div>
+                    </template>
+                    <div class="bg-gray-200 dark:bg-gray-600 flex-1 transition-all" x-show="weightRemaining > 0"></div>
+                </div>
+                <div x-show="weightSum !== 100 && topParams.length > 0" class="mt-2 flex items-center text-xs text-amber-600 dark:text-amber-400">
+                    <svg class="w-3.5 h-3.5 mr-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                    </svg>
+                    Weights don't add up to 100%. The system will auto-adjust during scoring — but it's good practice to set them correctly.
+                </div>
+            </div>
+
+            <!-- Guided Empty State -->
+            <div x-show="topParams.length === 0"
+                 class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border-2 border-dashed border-gray-200 dark:border-gray-600 p-10 text-center">
+                <div class="w-14 h-14 bg-blue-50 dark:bg-blue-900/30 rounded-xl flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-7 h-7 text-qci-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                    </svg>
+                </div>
+                <h3 class="text-base font-semibold text-gray-800 dark:text-white mb-1">No evaluation areas yet</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-5 max-w-sm mx-auto">
+                    Start by adding broad evaluation areas (e.g., "Technical Competence"), then add specific questions under each.
+                </p>
+                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-left max-w-sm mx-auto mb-5 border border-gray-200 dark:border-gray-600">
+                    <div class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2 uppercase tracking-wide">Typical structure</div>
+                    <div class="space-y-1.5 text-sm text-gray-600 dark:text-gray-300">
+                        <div class="flex items-center space-x-2">
+                            <span class="w-5 h-5 rounded bg-blue-500 text-white text-xs flex items-center justify-center font-bold">A</span>
+                            <span>Technical Competence <span class="text-gray-400 dark:text-gray-500">(30%)</span></span>
+                        </div>
+                        <div class="flex items-center space-x-2 pl-6">
+                            <span class="w-4 h-4 rounded-full border border-gray-300 dark:border-gray-500 text-xs flex items-center justify-center text-gray-400">1</span>
+                            <span class="text-gray-500 dark:text-gray-400">Knowledge of standards <span class="text-gray-400 dark:text-gray-500 text-xs">(Rating 1–5)</span></span>
+                        </div>
+                        <div class="flex items-center space-x-2 pl-6">
+                            <span class="w-4 h-4 rounded-full border border-gray-300 dark:border-gray-500 text-xs flex items-center justify-center text-gray-400">2</span>
+                            <span class="text-gray-500 dark:text-gray-400">Practical experience <span class="text-gray-400 dark:text-gray-500 text-xs">(Rating 1–5)</span></span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="w-5 h-5 rounded bg-emerald-500 text-white text-xs flex items-center justify-center font-bold">B</span>
+                            <span>Communication Skills <span class="text-gray-400 dark:text-gray-500">(20%)</span></span>
+                        </div>
+                    </div>
+                </div>
+                <button @click="openAddParam(null)"
+                        class="px-5 py-2.5 bg-qci-accent text-white text-sm font-medium rounded-lg hover:bg-blue-700">
+                    + Add First Evaluation Area
+                </button>
+            </div>
+
+            <!-- Parameter Cards -->
+            <template x-for="(param, pi) in topParams" :key="param.id">
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                    <!-- Parameter Header -->
+                    <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between"
+                         :class="'border-l-4 ' + borderColors[pi % borderColors.length]">
+                        <div class="flex items-center space-x-3">
+                            <span class="w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
+                                  :class="paramColors[pi % paramColors.length]"
+                                  x-text="String.fromCharCode(65 + pi)"></span>
+                            <div>
+                                <h3 class="font-semibold text-gray-900 dark:text-white" x-text="param.label"></h3>
+                                <div class="flex items-center space-x-3 text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                                    <span class="font-medium text-gray-600 dark:text-gray-400" x-text="'Weight: ' + param.weight + '%'"></span>
+                                    <span x-show="param.data_type !== 'CALCULATED'" class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 dark:text-gray-400 rounded" x-text="friendlyType(param.data_type)"></span>
+                                    <span x-show="param.data_type === 'CALCULATED'" class="px-1.5 py-0.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded text-xs">Auto-scored from sub-questions</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <button @click="openAddParam(param.id)"
+                                    class="text-qci-accent hover:text-blue-700 text-xs font-medium flex items-center space-x-1">
+                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                                <span>Add Question</span>
+                            </button>
+                            <button @click="deleteParam(param.id)" class="text-gray-300 dark:text-gray-600 hover:text-red-500 transition">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Sub-parameters -->
+                    <div class="divide-y divide-gray-50 dark:divide-gray-700">
+                        <template x-for="(sub, si) in param.children || []" :key="sub.id">
+                            <div class="px-5 py-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700 group">
+                                <div class="flex items-center space-x-3">
+                                    <span class="w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-xs text-gray-500 dark:text-gray-400 flex-shrink-0"
+                                          x-text="si + 1"></span>
+                                    <div>
+                                        <span class="text-sm text-gray-800 dark:text-gray-200" x-text="sub.label"></span>
+                                        <div class="flex items-center space-x-2 text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                                            <span class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded" x-text="friendlyType(sub.data_type)"></span>
+                                            <span x-show="sub.is_mandatory" class="px-1.5 py-0.5 bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-400 rounded">Required</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button @click="deleteParam(sub.id)" class="text-gray-200 dark:text-gray-600 hover:text-red-500 transition opacity-0 group-hover:opacity-100">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                </button>
+                            </div>
+                        </template>
+
+                        <!-- Empty sub-param prompt -->
+                        <div x-show="!param.children || param.children.length === 0"
+                             class="px-5 py-4 flex items-center justify-between bg-gray-50 dark:bg-gray-700/50">
+                            <p class="text-sm text-gray-400 dark:text-gray-500">No questions yet — add specific questions to be rated under this area.</p>
+                            <button @click="openAddParam(param.id)"
+                                    class="text-xs text-qci-accent hover:text-blue-700 font-medium flex-shrink-0 ml-4">Add question →</button>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <!-- Right Sidebar -->
+        <div class="space-y-6">
+            <!-- Essential Criteria -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
+                <div class="flex justify-between items-center mb-3">
+                    <div>
+                        <h2 class="text-base font-semibold text-gray-900 dark:text-white">Essential Criteria</h2>
+                        <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Pass/fail gates — must answer "Yes"</p>
+                    </div>
+                    <button @click="showAddEssential = true"
+                            class="text-qci-accent hover:text-blue-700 text-xs font-medium flex items-center space-x-1">
+                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                        <span>Add</span>
+                    </button>
+                </div>
+
+                <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 mb-3 flex items-start space-x-2">
+                    <svg class="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92z" clip-rule="evenodd"/>
+                    </svg>
+                    <p class="text-xs text-amber-700 dark:text-amber-400">If any of these is answered "No", the assessor will be automatically flagged for review — regardless of score.</p>
+                </div>
+
+                <div class="space-y-2">
+                    <template x-for="ec in form.essential_criteria || []" :key="ec.id">
+                        <div class="flex items-start justify-between p-2.5 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-100 dark:border-red-800 group">
+                            <div class="flex items-start space-x-2">
+                                <svg class="w-3.5 h-3.5 text-red-500 dark:text-red-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                </svg>
+                                <span class="text-xs font-medium text-red-800 dark:text-red-300" x-text="ec.label"></span>
+                            </div>
+                        </div>
+                    </template>
+                    <div x-show="!form.essential_criteria || form.essential_criteria.length === 0"
+                         class="text-xs text-gray-400 dark:text-gray-500 italic text-center py-3">No essential criteria defined yet.</div>
+                </div>
+            </div>
+
+            <!-- Form Preview -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
+                <h2 class="text-base font-semibold text-gray-900 dark:text-white mb-4">What Assessors Will See</h2>
+                <div class="space-y-4">
+                    <div>
+                        <div class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">Auto-filled header</div>
+                        <div class="space-y-1.5">
+                            <div class="border border-gray-200 dark:border-gray-600 rounded px-3 py-2 text-xs text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-700">Organization Name</div>
+                            <div class="border border-gray-200 dark:border-gray-600 rounded px-3 py-2 text-xs text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-700">Assessment Date</div>
+                            <div class="border border-gray-200 dark:border-gray-600 rounded px-3 py-2 text-xs text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-700">Assessor Name &amp; ID</div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">Rating scale used</div>
+                        <div class="flex items-center justify-between bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                            <template x-for="n in 5" :key="n">
+                                <div class="flex flex-col items-center">
+                                    <div class="w-7 h-7 rounded-full border-2 flex items-center justify-center mb-1"
+                                         :class="n <= 3 ? 'border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400' : 'border-qci-gold bg-qci-gold bg-opacity-10 text-yellow-700 dark:text-yellow-400'">
+                                        <span x-text="n" class="text-xs font-semibold"></span>
+                                    </div>
+                                    <span class="text-gray-400 dark:text-gray-500 text-xs" x-text="['Poor','Fair','Good','Very Good','Excellent'][n-1]"></span>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">Scoring formula</div>
+                        <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 text-xs text-gray-600 dark:text-gray-400 font-mono text-center">
+                            Score = &Sigma;(Area<sub>i</sub> &times; Weight<sub>i</sub>)
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Parameter / Sub-parameter Modal -->
+    <div x-show="showAddParam"
+         x-transition:enter="transition ease-out duration-150"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-100"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" @click.self="showAddParam = false">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <!-- Modal Header -->
+            <div class="px-6 py-5 border-b border-gray-100 dark:border-gray-700">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white" x-text="newParam.parent_id ? 'Add a Question' : 'Add an Evaluation Area'"></h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1"
+                   x-text="newParam.parent_id
+                       ? 'This question will appear under the selected area. Assessors will rate this directly.'
+                       : 'An evaluation area groups related questions together. You can set a weight to indicate its importance.'">
+                </p>
+            </div>
+
+            <div class="px-6 py-5 space-y-5">
+                <!-- Label (primary) -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                        <span x-text="newParam.parent_id ? 'Question / Criterion' : 'Area Name'"></span>
+                        <span class="text-red-500 ml-1">*</span>
+                    </label>
+                    <input x-model="newParam.label"
+                           @input="autoFillCode()"
+                           @keydown.enter.prevent="addParam()"
+                           type="text"
+                           :placeholder="newParam.parent_id ? 'e.g. Knowledge of standards' : 'e.g. Technical Competence'"
+                           class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-300 focus:border-transparent outline-none">
+                </div>
+
+                <!-- Response Type -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Response Type</label>
+                    <div class="grid grid-cols-2 gap-2" x-show="newParam.parent_id">
+                        <template x-for="opt in subTypeOptions" :key="opt.value">
+                            <button type="button"
+                                    @click="newParam.data_type = opt.value"
+                                    :class="newParam.data_type === opt.value
+                                        ? 'border-qci-accent bg-blue-50 dark:bg-blue-900/30 text-qci-accent ring-2 ring-blue-200 dark:ring-blue-800'
+                                        : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-500'"
+                                    class="border rounded-lg px-3 py-2.5 text-left transition dark:bg-gray-700">
+                                <div class="font-medium text-sm" x-text="opt.label"></div>
+                                <div class="text-xs text-gray-400 dark:text-gray-500 mt-0.5" x-text="opt.hint"></div>
+                            </button>
+                        </template>
+                    </div>
+                    <div x-show="!newParam.parent_id" class="flex items-center space-x-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800">
+                        <svg class="w-4 h-4 text-blue-500 dark:text-blue-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <span class="text-xs text-blue-700 dark:text-blue-400">Evaluation areas are automatically scored as the average of their questions.</span>
+                    </div>
+                </div>
+
+                <!-- Weight (only for top-level) -->
+                <div x-show="!newParam.parent_id">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                        Importance Weight
+                        <span class="text-gray-400 dark:text-gray-500 font-normal ml-1">(<span x-text="weightRemaining"></span>% remaining)</span>
+                    </label>
+                    <div class="flex items-center space-x-3">
+                        <input x-model.number="newParam.weight" type="range" min="0" max="100" step="5"
+                               class="flex-1 h-2 accent-blue-600">
+                        <div class="flex items-center border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
+                            <input x-model.number="newParam.weight" type="number" min="0" max="100"
+                                   class="w-16 text-center py-2 text-sm outline-none border-none bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                            <span class="pr-3 text-sm text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-700">%</span>
+                        </div>
+                    </div>
+                    <div x-show="weightSum + (newParam.weight||0) > 100"
+                         class="mt-1.5 text-xs text-amber-600 dark:text-amber-400 flex items-center space-x-1">
+                        <svg class="w-3.5 h-3.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                        <span>Total will exceed 100% — the system will auto-normalize all weights during scoring.</span>
+                    </div>
+                </div>
+
+                <!-- Required toggle — only for sub-questions -->
+                <div x-show="newParam.parent_id" class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <div>
+                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Required question</span>
+                        <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Assessors must answer this before submitting</p>
+                    </div>
+                    <button type="button" @click="newParam.is_mandatory = !newParam.is_mandatory"
+                            :class="newParam.is_mandatory ? 'bg-qci-accent' : 'bg-gray-200 dark:bg-gray-600'"
+                            class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none">
+                        <span :class="newParam.is_mandatory ? 'translate-x-6' : 'translate-x-1'"
+                              class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform shadow"></span>
+                    </button>
+                </div>
+
+                <!-- Advanced: Code field -->
+                <div>
+                    <button type="button" @click="showAdvanced = !showAdvanced"
+                            class="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 flex items-center space-x-1 transition">
+                        <svg class="w-3.5 h-3.5 transition-transform" :class="showAdvanced ? 'rotate-90' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                        </svg>
+                        <span>Advanced settings</span>
+                    </button>
+                    <div x-show="showAdvanced" class="mt-3">
+                        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Internal Code
+                            <span class="text-gray-400 dark:text-gray-500 font-normal ml-1">(auto-generated from name, you can edit)</span>
+                        </label>
+                        <input x-model="newParam.code" type="text" placeholder="e.g. TECHNICAL_COMPETENCE"
+                               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm font-mono bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-300 focus:border-transparent outline-none">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Validation error -->
+            <div x-show="paramError" class="mx-6 mb-1 flex items-start space-x-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-4 py-3">
+                <svg class="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                </svg>
+                <p class="text-sm text-red-700 dark:text-red-400" x-text="paramError"></p>
+            </div>
+
+            <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-700 flex justify-end space-x-3">
+                <button @click="showAddParam = false; showAdvanced = false"
+                        class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">Cancel</button>
+                <button @click="addParam()"
+                        :disabled="!newParam.label.trim()"
+                        class="px-5 py-2 bg-qci-accent text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <span x-text="newParam.parent_id ? 'Add Question' : 'Add Area'"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Essential Modal -->
+    <div x-show="showAddEssential"
+         x-transition:enter="transition ease-out duration-150"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-100"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" @click.self="showAddEssential = false">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div class="px-6 py-5 border-b border-gray-100 dark:border-gray-700">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Add Essential Criterion</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">A yes/no gate — if answered "No", the assessor is flagged regardless of score.</p>
+            </div>
+            <div class="px-6 py-5 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Criterion Statement <span class="text-red-500">*</span></label>
+                    <input x-model="newEssential.label"
+                           @input="newEssential.code = toCode(newEssential.label)"
+                           @keydown.enter.prevent="addEssential()"
+                           type="text"
+                           placeholder="e.g. Maintains professional ethics and conduct"
+                           class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-300 focus:border-transparent outline-none">
+                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Phrase it so that "Yes" is always the desired answer.</p>
+                </div>
+                <div>
+                    <button type="button" @click="showEssentialAdvanced = !showEssentialAdvanced"
+                            class="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 flex items-center space-x-1 transition">
+                        <svg class="w-3.5 h-3.5 transition-transform" :class="showEssentialAdvanced ? 'rotate-90' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                        </svg>
+                        <span>Advanced settings</span>
+                    </button>
+                    <div x-show="showEssentialAdvanced" class="mt-3">
+                        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Internal Code</label>
+                        <input x-model="newEssential.code" type="text" placeholder="e.g. PROFESSIONAL_ETHICS"
+                               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm font-mono bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-300 focus:border-transparent outline-none">
+                    </div>
+                </div>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-700 flex justify-end space-x-3">
+                <button @click="showAddEssential = false; showEssentialAdvanced = false"
+                        class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">Cancel</button>
+                <button @click="addEssential()"
+                        :disabled="!newEssential.label.trim()"
+                        class="px-5 py-2 bg-qci-accent text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                    Add Essential Criterion
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function formBuilder(boardCode, formId) {
+    return {
+        boardCode, boardId: '', form: {},
+        showAddParam: false, showAddEssential: false,
+        showAdvanced: false, showEssentialAdvanced: false,
+        paramError: '', essentialError: '',
+        newParam: { code: '', label: '', weight: 10, data_type: 'RATING_1_5', is_mandatory: true, parent_id: null, sort_order: 0 },
+        newEssential: { code: '', label: '', sort_order: 0 },
+
+        paramColors:  ['bg-blue-500', 'bg-emerald-500', 'bg-orange-500', 'bg-purple-500', 'bg-pink-500', 'bg-teal-500', 'bg-indigo-500', 'bg-rose-500'],
+        borderColors: ['border-l-blue-500', 'border-l-emerald-500', 'border-l-orange-500', 'border-l-purple-500', 'border-l-pink-500', 'border-l-teal-500', 'border-l-indigo-500', 'border-l-rose-500'],
+
+        subTypeOptions: [
+            { value: 'RATING_1_5', label: '1–5 Rating',    hint: 'Poor → Excellent' },
+            { value: 'YES_NO',     label: 'Yes / No',       hint: 'Binary choice' },
+            { value: 'PERCENTAGE', label: 'Percentage',     hint: '0–100%' },
+            { value: 'TEXT',       label: 'Free text',      hint: 'Open-ended answer' },
+        ],
+
+        typeMap: {
+            'RATING_1_5': '1–5 Rating',
+            'YES_NO':     'Yes / No',
+            'PERCENTAGE': 'Percentage (0–100%)',
+            'TEXT':       'Free text',
+            'CALCULATED': 'Auto-scored',
+            'DROPDOWN':   'Dropdown',
+        },
+
+        get topParams() {
+            return this.form.parameters || [];
+        },
+        get weightSum() {
+            return this.topParams.reduce((s, p) => s + (p.weight || 0), 0);
+        },
+        get weightRemaining() {
+            return Math.max(0, 100 - this.weightSum);
+        },
+
+        friendlyType(dt) {
+            return this.typeMap[dt] || dt;
+        },
+
+        toCode(label) {
+            return label.trim().toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+        },
+
+        autoFillCode() {
+            this.newParam.code = this.toCode(this.newParam.label);
+        },
+
+        openAddParam(parentId) {
+            this.newParam = {
+                code: '', label: '',
+                weight: Math.min(10, this.weightRemaining),
+                data_type: 'RATING_1_5',
+                is_mandatory: true,
+                parent_id: parentId,
+                sort_order: 0,
+            };
+            this.showAdvanced = false;
+            this.paramError = '';
+            this.showAddParam = true;
+        },
+
+        async init() {
+            const board = await api.get('/api/v1/boards/' + boardCode);
+            this.boardId = board.id;
+            await this.reload();
+        },
+
+        async reload() {
+            this.form = await api.get('/api/v1/boards/' + this.boardId + '/forms/' + formId);
+        },
+
+        async addParam() {
+            if (!this.newParam.label.trim()) return;
+            this.paramError = '';
+            if (!this.newParam.parent_id) {
+                this.newParam.data_type = 'CALCULATED';
+            }
+            this.newParam.sort_order = this.topParams.length;
+            try {
+                await api.post('/api/v1/boards/' + this.boardId + '/forms/' + formId + '/parameters', this.newParam);
+                this.showAddParam = false;
+                this.showAdvanced = false;
+                await this.reload();
+            } catch (e) {
+                this.paramError = e.message || 'Failed to add. Please try again.';
+            }
+        },
+
+        async deleteParam(paramId) {
+            if (!confirm('Delete this item and all its questions? This cannot be undone.')) return;
+            await api.del('/api/v1/boards/' + this.boardId + '/forms/' + formId + '/parameters/' + paramId);
+            await this.reload();
+        },
+
+        async addEssential() {
+            if (!this.newEssential.label.trim()) return;
+            if (!this.newEssential.code) this.newEssential.code = this.toCode(this.newEssential.label);
+            this.newEssential.sort_order = (this.form.essential_criteria || []).length;
+            await api.post('/api/v1/boards/' + this.boardId + '/forms/' + formId + '/essentials', this.newEssential);
+            this.showAddEssential = false;
+            this.showEssentialAdvanced = false;
+            this.newEssential = { code: '', label: '', sort_order: 0 };
+            await this.reload();
+        },
+    };
+}
+</script>
+{% endblock %}

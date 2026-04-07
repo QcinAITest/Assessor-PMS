@@ -1,0 +1,410 @@
+{% extends "base.html" %}
+{% block title %}Scoring Dashboard - QCI PMS{% endblock %}
+
+{% block content %}
+<div x-data="scoringApp('{{ board_code }}')" x-init="init()" x-cloak>
+    <!-- Breadcrumb -->
+    <nav class="mb-6 text-sm">
+        <a href="/" class="text-qci-accent hover:underline">Dashboard</a>
+        <span class="mx-2 text-gray-400 dark:text-gray-500">/</span>
+        <a :href="'/board/' + boardCode" class="text-qci-accent hover:underline" x-text="boardCode"></a>
+        <span class="mx-2 text-gray-400 dark:text-gray-500">/</span>
+        <span class="text-gray-700 dark:text-gray-300">Scoring &amp; Assessments</span>
+    </nav>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Left: Assessment Management -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Create Assessment -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Create Assessment</h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Assessment Type</label>
+                        <select x-model="newAssessment.assessment_type"
+                                class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                            <option value="Initial">Initial</option>
+                            <option value="Surveillance">Surveillance</option>
+                            <option value="Re-assessment">Re-assessment</option>
+                            <option value="Extension">Extension</option>
+                            <option value="Onsite">Onsite Monitoring</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Assessment Date</label>
+                        <input x-model="newAssessment.assessment_date" type="datetime-local"
+                               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Organization Name</label>
+                        <input x-model="newAssessment.organization_name" type="text" placeholder="e.g. XYZ Testing Lab"
+                               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Scheme / Standard</label>
+                        <input x-model="newAssessment.scheme" type="text" placeholder="e.g. ISO/IEC 17025"
+                               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500">
+                    </div>
+                </div>
+                <button @click="createAssessment()" class="mt-4 px-6 py-2 bg-qci-accent text-white text-sm font-medium rounded-lg hover:bg-blue-700">
+                    Create Assessment
+                </button>
+            </div>
+
+            <!-- Assessments List -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Assessments</h2>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full text-sm">
+                        <thead>
+                            <tr class="bg-gray-50 dark:bg-gray-700 text-left">
+                                <th class="px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Type</th>
+                                <th class="px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Organization</th>
+                                <th class="px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Date</th>
+                                <th class="px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Status</th>
+                                <th class="px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                            <template x-for="a in assessments" :key="a.id">
+                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                    <td class="px-4 py-3 text-gray-900 dark:text-gray-200" x-text="a.assessment_type"></td>
+                                    <td class="px-4 py-3 text-gray-900 dark:text-gray-200" x-text="a.organization_name || '-'"></td>
+                                    <td class="px-4 py-3 text-gray-500 dark:text-gray-400" x-text="new Date(a.assessment_date).toLocaleDateString()"></td>
+                                    <td class="px-4 py-3">
+                                        <span class="px-2 py-0.5 rounded text-xs font-medium"
+                                              :class="{
+                                                  'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300': a.status === 'IN_PROGRESS',
+                                                  'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300': a.status === 'PENDING_FEEDBACK',
+                                                  'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300': a.status === 'SCORED',
+                                                  'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300': a.status === 'CLOSED',
+                                              }"
+                                              x-text="a.status.replace(/_/g, ' ')"></span>
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        <button @click="selectedAssessment = a" class="text-qci-accent hover:underline text-xs">Select</button>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+                <div x-show="assessments.length === 0" class="text-center py-6 text-gray-400 dark:text-gray-500 text-sm">No assessments yet.</div>
+            </div>
+
+            <!-- Submit Form for Selected Assessment -->
+            <div x-show="selectedAssessment" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Submit Feedback Form</h2>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Assessment: <strong class="text-gray-700 dark:text-gray-200" x-text="selectedAssessment?.organization_name"></strong></p>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Form Template</label>
+                        <select x-model="submission.form_template_id" @change="loadFormDetail()"
+                                class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                            <option value="">Select form...</option>
+                            <template x-for="ft in forms" :key="ft.id">
+                                <option :value="ft.id" x-text="ft.name + ' (' + (ft.stakeholder_weight*100) + '%)'"></option>
+                            </template>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Evaluee (Assessor being rated)</label>
+                        <select x-model="submission.evaluee_id"
+                                class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                            <option value="">Select assessor...</option>
+                            <template x-for="a in assessors" :key="a.id">
+                                <option :value="a.id" x-text="a.name + ' (' + a.role_id + ')'"></option>
+                            </template>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Dynamic Form Fields -->
+                <div x-show="selectedFormDetail" class="space-y-4 mb-4">
+                    <template x-for="param in selectedFormDetail?.parameters || []" :key="param.id">
+                        <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                            <h4 class="font-semibold text-gray-800 dark:text-gray-200 text-sm mb-3" x-text="param.label + ' (' + param.weight + '%)'"></h4>
+                            <div class="space-y-3">
+                                <template x-for="sub in param.children || []" :key="sub.id">
+                                    <div class="flex items-center justify-between">
+                                        <label class="text-sm text-gray-700 dark:text-gray-300 flex-1" x-text="sub.label"></label>
+                                        <div class="flex items-center space-x-1 ml-4">
+                                            <template x-if="sub.data_type === 'RATING_1_5'">
+                                                <div class="flex space-x-1">
+                                                    <template x-for="n in 5" :key="n">
+                                                        <button @click="submission.responses[sub.code] = n"
+                                                                class="w-8 h-8 rounded-full border-2 text-xs font-bold transition-all"
+                                                                :class="submission.responses[sub.code] >= n ? 'bg-qci-gold border-qci-gold text-white' : 'border-gray-300 dark:border-gray-600 text-gray-400 dark:text-gray-500 hover:border-qci-gold'"
+                                                                x-text="n">
+                                                        </button>
+                                                    </template>
+                                                </div>
+                                            </template>
+                                            <template x-if="sub.data_type === 'YES_NO'">
+                                                <select x-model="submission.responses[sub.code]"
+                                                        class="border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                                                    <option value="YES">Yes</option>
+                                                    <option value="NO">No</option>
+                                                </select>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- Essential Criteria -->
+                    <div x-show="selectedFormDetail?.essential_criteria?.length > 0"
+                         class="border-2 border-red-200 dark:border-red-800 rounded-lg p-4 bg-red-50 dark:bg-red-900/20">
+                        <h4 class="font-semibold text-red-800 dark:text-red-300 text-sm mb-3">Essential Criteria (Must be YES)</h4>
+                        <div class="space-y-2">
+                            <template x-for="ec in selectedFormDetail?.essential_criteria || []" :key="ec.id">
+                                <div class="flex items-center justify-between">
+                                    <label class="text-sm text-red-700 dark:text-red-300" x-text="ec.label"></label>
+                                    <select x-model="submission.responses[ec.code]"
+                                            class="border border-red-300 dark:border-red-700 rounded px-2 py-1 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                                        <option value="YES">YES</option>
+                                        <option value="NO">NO</option>
+                                    </select>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-4">
+                    <button @click="submitForm()" class="px-6 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700"
+                            :disabled="!submission.form_template_id || !submission.evaluee_id">
+                        Submit &amp; Score
+                    </button>
+                    <span x-show="lastResult" class="text-sm dark:text-gray-300">
+                        Score: <strong class="text-lg" x-text="lastResult?.form_score?.toFixed(2)"></strong>
+                        <span x-show="lastResult?.essential_flag" class="text-red-600 dark:text-red-400 font-semibold ml-2">FLAGGED</span>
+                    </span>
+                </div>
+            </div>
+
+            <!-- Calculate Final Audit Score -->
+            <div x-show="selectedAssessment" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Calculate Final Audit Score</h2>
+                <div class="flex flex-wrap items-center gap-3 mb-4">
+                    <select x-model="scoreEvalueeId"
+                            class="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                        <option value="">Select evaluee...</option>
+                        <template x-for="a in assessors" :key="a.id">
+                            <option :value="a.id" x-text="a.name"></option>
+                        </template>
+                    </select>
+                    <button @click="calculateScore()" class="px-6 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700">
+                        Calculate
+                    </button>
+                </div>
+                <div x-show="auditScore" class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                    <div class="flex flex-wrap items-center gap-6">
+                        <div>
+                            <div class="text-3xl font-bold text-gray-900 dark:text-white" x-text="auditScore?.final_score?.toFixed(2)"></div>
+                            <div class="text-sm text-gray-500 dark:text-gray-400">Final Score</div>
+                        </div>
+                        <div>
+                            <div x-html="starHtml(auditScore?.star_rating || 0)"></div>
+                            <div class="text-sm text-gray-500 dark:text-gray-400" x-text="auditScore?.star_rating + ' Star'"></div>
+                        </div>
+                        <div x-show="auditScore?.essential_flag" class="px-3 py-1.5 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded-lg text-sm font-semibold">
+                            ESSENTIAL CRITERIA FLAGGED
+                        </div>
+                    </div>
+                    <div class="mt-4 space-y-2">
+                        <div class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Form Score Breakdown:</div>
+                        <template x-for="(data, formCode) in auditScore?.form_scores || {}" :key="formCode">
+                            <div class="flex items-center justify-between text-sm">
+                                <span class="text-gray-600 dark:text-gray-400" x-text="formCode"></span>
+                                <div class="flex items-center space-x-3">
+                                    <span class="dark:text-gray-300" x-text="data.score?.toFixed(2)"></span>
+                                    <span class="text-gray-400 dark:text-gray-500" x-text="'x ' + (data.weight*100) + '%'"></span>
+                                    <span class="font-semibold dark:text-white" x-text="(data.score * data.weight).toFixed(2)"></span>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Assessors & Quick Actions -->
+        <div class="space-y-6">
+            <!-- Register Assessor -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <h2 class="text-base font-semibold text-gray-900 dark:text-white mb-4">Register Assessor</h2>
+                <div class="space-y-3">
+                    <input x-model="newAssessor.employee_id" type="text" placeholder="Employee ID"
+                           class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500">
+                    <input x-model="newAssessor.name" type="text" placeholder="Full Name"
+                           class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500">
+                    <input x-model="newAssessor.email" type="email" placeholder="Email"
+                           class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500">
+                    <select x-model="newAssessor.role_id"
+                            class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                        <option value="">Select role...</option>
+                        <template x-for="r in roles" :key="r.system_role_id">
+                            <option :value="r.system_role_id" x-text="r.display_label"></option>
+                        </template>
+                    </select>
+                    <button @click="registerAssessor()" class="w-full px-4 py-2 bg-qci-accent text-white text-sm font-medium rounded-lg hover:bg-blue-700">
+                        Register
+                    </button>
+                </div>
+            </div>
+
+            <!-- Assessors List -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <h2 class="text-base font-semibold text-gray-900 dark:text-white mb-4">Assessors</h2>
+                <div class="space-y-2 max-h-96 overflow-y-auto">
+                    <template x-for="a in assessors" :key="a.id">
+                        <div class="p-3 border border-gray-100 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <div class="font-medium text-sm text-gray-900 dark:text-white" x-text="a.name"></div>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400" x-text="a.employee_id + ' | ' + a.role_id"></div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-xs text-gray-400 dark:text-gray-500" x-text="'Audits: ' + a.audit_count"></div>
+                                    <button @click="getCumulative(a.id)" class="text-qci-accent text-xs hover:underline">Rating</button>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                    <div x-show="assessors.length === 0" class="text-center py-4 text-gray-400 dark:text-gray-500 text-sm">No assessors registered.</div>
+                </div>
+            </div>
+
+            <!-- Cumulative Rating -->
+            <div x-show="cumulativeRating" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <h2 class="text-base font-semibold text-gray-900 dark:text-white mb-3">Cumulative Rating</h2>
+                <div class="text-center">
+                    <div class="text-4xl font-bold text-gray-900 dark:text-white" x-text="cumulativeRating?.cumulative_score?.toFixed(2)"></div>
+                    <div class="mt-2" x-html="starHtml(cumulativeRating?.star_rating || 0)"></div>
+                    <div class="text-sm text-gray-500 dark:text-gray-400 mt-1" x-text="'Over ' + cumulativeRating?.window_size + ' audits'"></div>
+                    <div x-show="cumulativeRating?.has_essential_flags" class="mt-2 px-3 py-1 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded text-xs font-semibold">
+                        Has Essential Flags
+                    </div>
+                </div>
+            </div>
+
+            <!-- Integration Trigger -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <h2 class="text-base font-semibold text-gray-900 dark:text-white mb-3">Trigger: Assessment Complete</h2>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Simulate an external portal trigger to auto-generate feedback forms.</p>
+                <div class="space-y-3">
+                    <select x-model="triggerAssessmentId"
+                            class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                        <option value="">Select assessment...</option>
+                        <template x-for="a in assessments" :key="a.id">
+                            <option :value="a.id" x-text="a.organization_name + ' (' + a.assessment_type + ')'"></option>
+                        </template>
+                    </select>
+                    <div class="text-xs text-gray-500 dark:text-gray-400">Select evaluees:</div>
+                    <div class="space-y-1 max-h-32 overflow-y-auto">
+                        <template x-for="a in assessors" :key="a.id">
+                            <label class="flex items-center text-sm text-gray-700 dark:text-gray-300">
+                                <input type="checkbox" :value="a.id" x-model="triggerEvalueeIds" class="mr-2">
+                                <span x-text="a.name"></span>
+                            </label>
+                        </template>
+                    </div>
+                    <button @click="fireTrigger()" class="w-full px-4 py-2 bg-amber-500 text-white text-sm font-medium rounded-lg hover:bg-amber-600">
+                        Fire Trigger
+                    </button>
+                    <div x-show="triggerResult" class="bg-gray-50 dark:bg-gray-700 rounded p-3 text-xs">
+                        <pre class="text-gray-700 dark:text-gray-300 whitespace-pre-wrap" x-text="JSON.stringify(triggerResult, null, 2)"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function scoringApp(boardCode) {
+    return {
+        boardCode, boardId: '', forms: [], assessors: [], assessments: [], roles: [],
+        selectedAssessment: null, selectedFormDetail: null,
+        newAssessment: { assessment_type: 'Initial', organization_name: '', scheme: '', assessment_date: '' },
+        newAssessor: { employee_id: '', name: '', email: '', role_id: '' },
+        submission: { form_template_id: '', evaluator_id: '', evaluee_id: '', responses: {}, comments: '' },
+        lastResult: null, auditScore: null, cumulativeRating: null,
+        scoreEvalueeId: '',
+        triggerAssessmentId: '', triggerEvalueeIds: [], triggerResult: null,
+
+        async init() {
+            const board = await api.get('/api/v1/boards/' + boardCode);
+            this.boardId = board.id;
+            this.roles = board.roles || [];
+            this.forms = board.form_templates || [];
+            await this.loadAssessors();
+            await this.loadAssessments();
+        },
+
+        async loadAssessors() {
+            this.assessors = await api.get('/api/v1/boards/' + this.boardId + '/assessors');
+        },
+        async loadAssessments() {
+            this.assessments = await api.get('/api/v1/boards/' + this.boardId + '/assessments');
+        },
+
+        async createAssessment() {
+            if (!this.newAssessment.assessment_date) {
+                this.newAssessment.assessment_date = new Date().toISOString();
+            }
+            await api.post('/api/v1/boards/' + this.boardId + '/assessments', this.newAssessment);
+            this.newAssessment = { assessment_type: 'Initial', organization_name: '', scheme: '', assessment_date: '' };
+            await this.loadAssessments();
+        },
+
+        async registerAssessor() {
+            await api.post('/api/v1/boards/' + this.boardId + '/assessors', this.newAssessor);
+            this.newAssessor = { employee_id: '', name: '', email: '', role_id: '' };
+            await this.loadAssessors();
+        },
+
+        async loadFormDetail() {
+            if (!this.submission.form_template_id) { this.selectedFormDetail = null; return; }
+            this.selectedFormDetail = await api.get('/api/v1/boards/' + this.boardId + '/forms/' + this.submission.form_template_id);
+            this.submission.responses = {};
+            for (const ec of this.selectedFormDetail.essential_criteria || []) {
+                this.submission.responses[ec.code] = 'YES';
+            }
+        },
+
+        async submitForm() {
+            if (!this.submission.evaluee_id) return;
+            this.submission.evaluator_id = this.submission.evaluee_id; // self for demo
+            this.lastResult = await api.post('/api/v1/assessments/' + this.selectedAssessment.id + '/submissions', this.submission);
+        },
+
+        async calculateScore() {
+            if (!this.scoreEvalueeId || !this.selectedAssessment) return;
+            this.auditScore = await api.post(
+                '/api/v1/assessments/' + this.selectedAssessment.id + '/calculate-score?evaluee_id=' + this.scoreEvalueeId,
+                {}
+            );
+        },
+
+        async getCumulative(assessorId) {
+            this.cumulativeRating = await api.get('/api/v1/assessors/' + assessorId + '/cumulative-rating');
+        },
+
+        async fireTrigger() {
+            if (!this.triggerAssessmentId || this.triggerEvalueeIds.length === 0) return;
+            this.triggerResult = await api.post('/api/v1/triggers/assessment-complete', {
+                assessment_id: this.triggerAssessmentId,
+                evaluee_ids: this.triggerEvalueeIds,
+            });
+        },
+    };
+}
+</script>
+{% endblock %}
