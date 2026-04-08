@@ -8,6 +8,7 @@ from app.models.board import (
     Board, Assessor, Assessment, FormSubmission, FormTemplate,
     AuditScore, CumulativeRating
 )
+from app.models.auth import User
 from app.schemas.requests import (
     AssessorCreate, AssessorUpdate, AssessmentCreate, SubmissionCreate, TriggerAssessmentComplete
 )
@@ -18,19 +19,20 @@ from app.services.scoring_engine import (
 from app.services.frequency_manager import (
     evaluate_triggers, create_pending_submissions, increment_audit_count
 )
+from app.api.auth import require_board_access, get_current_user
 
 router = APIRouter(prefix="/api/v1", tags=["Assessments & Scoring"])
 
 
 # --- Assessors ---
 @router.get("/boards/{board_id}/assessors")
-def list_assessors(board_id: str, db: Session = Depends(get_db)):
+def list_assessors(board_id: str, _: User = Depends(require_board_access), db: Session = Depends(get_db)):
     assessors = db.query(Assessor).filter(Assessor.board_id == board_id).all()
     return [_assessor_dict(a) for a in assessors]
 
 
 @router.post("/boards/{board_id}/assessors")
-def create_assessor(board_id: str, data: AssessorCreate, db: Session = Depends(get_db)):
+def create_assessor(board_id: str, data: AssessorCreate, _: User = Depends(require_board_access), db: Session = Depends(get_db)):
     board = _get_board(db, board_id)
     assessor = Assessor(id=str(uuid.uuid4()), board_id=board.id, **data.dict())
     db.add(assessor)
@@ -39,7 +41,7 @@ def create_assessor(board_id: str, data: AssessorCreate, db: Session = Depends(g
 
 
 @router.put("/boards/{board_id}/assessors/{assessor_id}")
-def update_assessor(board_id: str, assessor_id: str, data: AssessorUpdate, db: Session = Depends(get_db)):
+def update_assessor(board_id: str, assessor_id: str, data: AssessorUpdate, _: User = Depends(require_board_access), db: Session = Depends(get_db)):
     assessor = db.query(Assessor).filter(Assessor.id == assessor_id, Assessor.board_id == board_id).first()
     if not assessor:
         raise HTTPException(404, "Assessor not found")
@@ -52,7 +54,7 @@ def update_assessor(board_id: str, assessor_id: str, data: AssessorUpdate, db: S
 
 
 @router.delete("/boards/{board_id}/assessors/{assessor_id}", status_code=200)
-def deactivate_assessor(board_id: str, assessor_id: str, db: Session = Depends(get_db)):
+def deactivate_assessor(board_id: str, assessor_id: str, _: User = Depends(require_board_access), db: Session = Depends(get_db)):
     """Fix 8: Soft-delete — sets is_active=False. Hard delete is blocked because assessors
     are referenced in historical FormSubmissions and AuditScores."""
     assessor = db.query(Assessor).filter(Assessor.id == assessor_id, Assessor.board_id == board_id).first()
@@ -67,14 +69,14 @@ def deactivate_assessor(board_id: str, assessor_id: str, db: Session = Depends(g
 
 # --- Assessments ---
 @router.get("/boards/{board_id}/assessments")
-def list_assessments(board_id: str, db: Session = Depends(get_db)):
+def list_assessments(board_id: str, _: User = Depends(require_board_access), db: Session = Depends(get_db)):
     items = db.query(Assessment).filter(Assessment.board_id == board_id).order_by(
         Assessment.assessment_date.desc()).all()
     return [_assessment_dict(a) for a in items]
 
 
 @router.post("/boards/{board_id}/assessments")
-def create_assessment(board_id: str, data: AssessmentCreate, db: Session = Depends(get_db)):
+def create_assessment(board_id: str, data: AssessmentCreate, _: User = Depends(require_board_access), db: Session = Depends(get_db)):
     board = _get_board(db, board_id)
     assessment = Assessment(id=str(uuid.uuid4()), board_id=board.id, **data.dict())
     db.add(assessment)

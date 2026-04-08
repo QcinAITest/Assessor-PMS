@@ -8,6 +8,7 @@ from app.models.board import (
     Board, BoardRole, FormTemplate, Parameter, EssentialCriterion,
     FrequencyRule, Webhook, FormSubmission, log_config_change
 )
+from app.models.auth import User
 from app.schemas.requests import (
     BoardCreate, BoardUpdate, RoleMapping, FormTemplateCreate,
     ParameterCreate, EssentialCriterionCreate, EssentialCriterionUpdate,
@@ -15,18 +16,31 @@ from app.schemas.requests import (
     WebhookCreate, WebhookUpdate
 )
 from app.services.scoring_engine import normalize_weights
+from app.api.auth import get_current_user, require_board_access, require_system_admin
 
 router = APIRouter(prefix="/api/v1/boards", tags=["Board Configuration"])
 
 
 @router.get("")
-def list_boards(db: Session = Depends(get_db)):
-    boards = db.query(Board).all()
+def list_boards(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """System admins see all boards; board admins see only their own board."""
+    if current_user.role == "SYSTEM_ADMIN":
+        boards = db.query(Board).all()
+    else:
+        boards = db.query(Board).filter(Board.id == current_user.board_id).all()
     return [_board_summary(b) for b in boards]
 
 
 @router.post("")
-def create_board(data: BoardCreate, db: Session = Depends(get_db)):
+def create_board(
+    data: BoardCreate,
+    _: User = Depends(require_system_admin),
+    db: Session = Depends(get_db),
+):
+    """Only system admins can create new boards."""
     if db.query(Board).filter(Board.code == data.code).first():
         raise HTTPException(400, f"Board '{data.code}' already exists")
     board = Board(id=str(uuid.uuid4()), **data.dict())
@@ -36,13 +50,22 @@ def create_board(data: BoardCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/{board_id}")
-def get_board(board_id: str, db: Session = Depends(get_db)):
+def get_board(
+    board_id: str,
+    _: User = Depends(require_board_access),
+    db: Session = Depends(get_db),
+):
     board = _get_board(db, board_id)
     return _board_detail(db, board)
 
 
 @router.put("/{board_id}")
-def update_board(board_id: str, data: BoardUpdate, db: Session = Depends(get_db)):
+def update_board(
+    board_id: str,
+    data: BoardUpdate,
+    _: User = Depends(require_board_access),
+    db: Session = Depends(get_db),
+):
     board = _get_board(db, board_id)
     changes = data.dict(exclude_none=True)
     for k, v in changes.items():
@@ -54,7 +77,7 @@ def update_board(board_id: str, data: BoardUpdate, db: Session = Depends(get_db)
 
 # --- Role Mappings ---
 @router.get("/{board_id}/roles")
-def list_roles(board_id: str, db: Session = Depends(get_db)):
+def list_roles(board_id: str, _: User = Depends(require_board_access), db: Session = Depends(get_db)):
     board = _get_board(db, board_id)
     return [{"id": r.id, "system_role_id": r.system_role_id, "display_label": r.display_label,
              "can_be_evaluator": r.can_be_evaluator, "can_be_evaluee": r.can_be_evaluee}
@@ -62,7 +85,7 @@ def list_roles(board_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/{board_id}/roles")
-def add_role(board_id: str, data: RoleMapping, db: Session = Depends(get_db)):
+def add_role(board_id: str, data: RoleMapping, _: User = Depends(require_board_access), db: Session = Depends(get_db)):
     board = _get_board(db, board_id)
     role = BoardRole(board_id=board.id, **data.dict())
     db.add(role)
@@ -72,7 +95,7 @@ def add_role(board_id: str, data: RoleMapping, db: Session = Depends(get_db)):
 
 
 @router.put("/{board_id}/roles/{role_id}")
-def update_role(board_id: str, role_id: int, data: RoleMapping, db: Session = Depends(get_db)):
+def update_role(board_id: str, role_id: int, data: RoleMapping, _: User = Depends(require_board_access), db: Session = Depends(get_db)):
     role = db.query(BoardRole).filter(BoardRole.id == role_id, BoardRole.board_id == board_id).first()
     if not role:
         raise HTTPException(404, "Role not found")
@@ -85,7 +108,7 @@ def update_role(board_id: str, role_id: int, data: RoleMapping, db: Session = De
 
 
 @router.delete("/{board_id}/roles/{role_id}")
-def delete_role(board_id: str, role_id: int, db: Session = Depends(get_db)):
+def delete_role(board_id: str, role_id: int, _: User = Depends(require_board_access), db: Session = Depends(get_db)):
     role = db.query(BoardRole).filter(BoardRole.id == role_id, BoardRole.board_id == board_id).first()
     if not role:
         raise HTTPException(404, "Role not found")
@@ -98,13 +121,13 @@ def delete_role(board_id: str, role_id: int, db: Session = Depends(get_db)):
 
 # --- Form Templates ---
 @router.get("/{board_id}/forms")
-def list_forms(board_id: str, db: Session = Depends(get_db)):
+def list_forms(board_id: str, _: User = Depends(require_board_access), db: Session = Depends(get_db)):
     board = _get_board(db, board_id)
     return [_form_summary(f) for f in board.form_templates]
 
 
 @router.post("/{board_id}/forms")
-def create_form(board_id: str, data: FormTemplateCreate, db: Session = Depends(get_db)):
+def create_form(board_id: str, data: FormTemplateCreate, _: User = Depends(require_board_access), db: Session = Depends(get_db)):
     board = _get_board(db, board_id)
     existing_total = sum(f.stakeholder_weight or 0 for f in board.form_templates)
     new_total = round(existing_total + data.stakeholder_weight, 10)
@@ -124,7 +147,7 @@ def create_form(board_id: str, data: FormTemplateCreate, db: Session = Depends(g
 
 
 @router.get("/{board_id}/forms/{form_id}")
-def get_form(board_id: str, form_id: str, db: Session = Depends(get_db)):
+def get_form(board_id: str, form_id: str, _: User = Depends(require_board_access), db: Session = Depends(get_db)):
     ft = db.query(FormTemplate).filter(FormTemplate.id == form_id, FormTemplate.board_id == board_id).first()
     if not ft:
         raise HTTPException(404, "Form template not found")
@@ -132,7 +155,7 @@ def get_form(board_id: str, form_id: str, db: Session = Depends(get_db)):
 
 
 @router.put("/{board_id}/forms/{form_id}")
-def update_form(board_id: str, form_id: str, data: FormTemplateCreate, db: Session = Depends(get_db)):
+def update_form(board_id: str, form_id: str, data: FormTemplateCreate, _: User = Depends(require_board_access), db: Session = Depends(get_db)):
     ft = db.query(FormTemplate).filter(FormTemplate.id == form_id, FormTemplate.board_id == board_id).first()
     if not ft:
         raise HTTPException(404, "Form template not found")
@@ -157,7 +180,7 @@ def update_form(board_id: str, form_id: str, data: FormTemplateCreate, db: Sessi
 
 
 @router.delete("/{board_id}/forms/{form_id}")
-def delete_form(board_id: str, form_id: str, db: Session = Depends(get_db)):
+def delete_form(board_id: str, form_id: str, _: User = Depends(require_board_access), db: Session = Depends(get_db)):
     """Fix 1: Delete a form template. Blocked if real submissions exist."""
     ft = db.query(FormTemplate).filter(FormTemplate.id == form_id, FormTemplate.board_id == board_id).first()
     if not ft:
@@ -186,7 +209,7 @@ def delete_form(board_id: str, form_id: str, db: Session = Depends(get_db)):
 
 # --- Parameters ---
 @router.post("/{board_id}/forms/{form_id}/parameters")
-def add_parameter(board_id: str, form_id: str, data: ParameterCreate, db: Session = Depends(get_db)):
+def add_parameter(board_id: str, form_id: str, data: ParameterCreate, _: User = Depends(require_board_access), db: Session = Depends(get_db)):
     ft = db.query(FormTemplate).filter(FormTemplate.id == form_id, FormTemplate.board_id == board_id).first()
     if not ft:
         raise HTTPException(404, "Form template not found")
@@ -215,7 +238,7 @@ def add_parameter(board_id: str, form_id: str, data: ParameterCreate, db: Sessio
 
 @router.put("/{board_id}/forms/{form_id}/parameters/{param_id}")
 def update_parameter(board_id: str, form_id: str, param_id: str, data: ParameterCreate,
-                     db: Session = Depends(get_db)):
+                     _: User = Depends(require_board_access), db: Session = Depends(get_db)):
     param = db.query(Parameter).filter(Parameter.id == param_id, Parameter.form_template_id == form_id).first()
     if not param:
         raise HTTPException(404, "Parameter not found")
@@ -237,7 +260,7 @@ def update_parameter(board_id: str, form_id: str, param_id: str, data: Parameter
 
 
 @router.delete("/{board_id}/forms/{form_id}/parameters/{param_id}")
-def delete_parameter(board_id: str, form_id: str, param_id: str, db: Session = Depends(get_db)):
+def delete_parameter(board_id: str, form_id: str, param_id: str, _: User = Depends(require_board_access), db: Session = Depends(get_db)):
     param = db.query(Parameter).filter(Parameter.id == param_id, Parameter.form_template_id == form_id).first()
     if not param:
         raise HTTPException(404, "Parameter not found")
@@ -247,7 +270,7 @@ def delete_parameter(board_id: str, form_id: str, param_id: str, db: Session = D
 
 
 @router.get("/{board_id}/forms/{form_id}/normalized-weights")
-def get_normalized_weights(board_id: str, form_id: str, db: Session = Depends(get_db)):
+def get_normalized_weights(board_id: str, form_id: str, _: User = Depends(require_board_access), db: Session = Depends(get_db)):
     ft = db.query(FormTemplate).filter(FormTemplate.id == form_id, FormTemplate.board_id == board_id).first()
     if not ft:
         raise HTTPException(404, "Form template not found")
@@ -257,7 +280,7 @@ def get_normalized_weights(board_id: str, form_id: str, db: Session = Depends(ge
 
 # --- Form Distribution Links ---
 @router.post("/{board_id}/forms/{form_id}/generate-link")
-def generate_form_link(board_id: str, form_id: str, db: Session = Depends(get_db)):
+def generate_form_link(board_id: str, form_id: str, _: User = Depends(require_board_access), db: Session = Depends(get_db)):
     """Generate a shareable public link for a form template (creates a CREATED FormSubmission)."""
     ft = db.query(FormTemplate).filter(FormTemplate.id == form_id, FormTemplate.board_id == board_id).first()
     if not ft:
@@ -280,7 +303,7 @@ def generate_form_link(board_id: str, form_id: str, db: Session = Depends(get_db
 
 # --- Essential Criteria ---
 @router.post("/{board_id}/forms/{form_id}/essentials")
-def add_essential(board_id: str, form_id: str, data: EssentialCriterionCreate, db: Session = Depends(get_db)):
+def add_essential(board_id: str, form_id: str, data: EssentialCriterionCreate, _: User = Depends(require_board_access), db: Session = Depends(get_db)):
     ft = db.query(FormTemplate).filter(FormTemplate.id == form_id, FormTemplate.board_id == board_id).first()
     if not ft:
         raise HTTPException(404, "Form template not found")
@@ -293,7 +316,7 @@ def add_essential(board_id: str, form_id: str, data: EssentialCriterionCreate, d
 
 @router.put("/{board_id}/forms/{form_id}/essentials/{ec_id}")
 def update_essential(board_id: str, form_id: str, ec_id: str,
-                     data: EssentialCriterionUpdate, db: Session = Depends(get_db)):
+                     data: EssentialCriterionUpdate, _: User = Depends(require_board_access), db: Session = Depends(get_db)):
     """Fix 2a: Update an essential criterion."""
     ft = db.query(FormTemplate).filter(FormTemplate.id == form_id, FormTemplate.board_id == board_id).first()
     if not ft:
@@ -312,7 +335,7 @@ def update_essential(board_id: str, form_id: str, ec_id: str,
 
 
 @router.delete("/{board_id}/forms/{form_id}/essentials/{ec_id}")
-def delete_essential(board_id: str, form_id: str, ec_id: str, db: Session = Depends(get_db)):
+def delete_essential(board_id: str, form_id: str, ec_id: str, _: User = Depends(require_board_access), db: Session = Depends(get_db)):
     """Fix 2b: Delete an essential criterion."""
     ft = db.query(FormTemplate).filter(FormTemplate.id == form_id, FormTemplate.board_id == board_id).first()
     if not ft:
@@ -331,7 +354,7 @@ def delete_essential(board_id: str, form_id: str, ec_id: str, db: Session = Depe
 
 # --- Frequency Rules ---
 @router.get("/{board_id}/frequency-rules")
-def list_frequency_rules(board_id: str, db: Session = Depends(get_db)):
+def list_frequency_rules(board_id: str, _: User = Depends(require_board_access), db: Session = Depends(get_db)):
     rules = db.query(FrequencyRule).filter(FrequencyRule.board_id == board_id).all()
     return [{"id": r.id, "role_id": r.role_id, "form_template_id": r.form_template_id,
              "trigger_type": r.trigger_type, "trigger_value": r.trigger_value, "is_active": r.is_active}
@@ -339,7 +362,7 @@ def list_frequency_rules(board_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/{board_id}/frequency-rules")
-def add_frequency_rule(board_id: str, data: FrequencyRuleCreate, db: Session = Depends(get_db)):
+def add_frequency_rule(board_id: str, data: FrequencyRuleCreate, _: User = Depends(require_board_access), db: Session = Depends(get_db)):
     _get_board(db, board_id)
     rule = FrequencyRule(board_id=board_id, **data.dict())
     db.add(rule)
@@ -350,7 +373,7 @@ def add_frequency_rule(board_id: str, data: FrequencyRuleCreate, db: Session = D
 
 @router.put("/{board_id}/frequency-rules/{rule_id}")
 def update_frequency_rule(board_id: str, rule_id: int, data: FrequencyRuleUpdate,
-                          db: Session = Depends(get_db)):
+                          _: User = Depends(require_board_access), db: Session = Depends(get_db)):
     """Fix 5: Update trigger type / value / active status of a frequency rule."""
     rule = db.query(FrequencyRule).filter(FrequencyRule.id == rule_id, FrequencyRule.board_id == board_id).first()
     if not rule:
@@ -365,7 +388,7 @@ def update_frequency_rule(board_id: str, rule_id: int, data: FrequencyRuleUpdate
 
 
 @router.delete("/{board_id}/frequency-rules/{rule_id}")
-def delete_frequency_rule(board_id: str, rule_id: int, db: Session = Depends(get_db)):
+def delete_frequency_rule(board_id: str, rule_id: int, _: User = Depends(require_board_access), db: Session = Depends(get_db)):
     rule = db.query(FrequencyRule).filter(FrequencyRule.id == rule_id, FrequencyRule.board_id == board_id).first()
     if not rule:
         raise HTTPException(404, "Rule not found")
@@ -378,14 +401,14 @@ def delete_frequency_rule(board_id: str, rule_id: int, db: Session = Depends(get
 
 # --- Webhooks ---
 @router.get("/{board_id}/webhooks")
-def list_webhooks(board_id: str, db: Session = Depends(get_db)):
+def list_webhooks(board_id: str, _: User = Depends(require_board_access), db: Session = Depends(get_db)):
     hooks = db.query(Webhook).filter(Webhook.board_id == board_id).all()
     return [{"id": h.id, "event_type": h.event_type, "target_url": h.target_url, "is_active": h.is_active}
             for h in hooks]
 
 
 @router.post("/{board_id}/webhooks")
-def add_webhook(board_id: str, data: WebhookCreate, db: Session = Depends(get_db)):
+def add_webhook(board_id: str, data: WebhookCreate, _: User = Depends(require_board_access), db: Session = Depends(get_db)):
     _get_board(db, board_id)
     hook = Webhook(id=str(uuid.uuid4()), board_id=board_id, **data.dict())
     db.add(hook)
@@ -396,7 +419,7 @@ def add_webhook(board_id: str, data: WebhookCreate, db: Session = Depends(get_db
 
 
 @router.put("/{board_id}/webhooks/{hook_id}")
-def update_webhook(board_id: str, hook_id: str, data: WebhookUpdate, db: Session = Depends(get_db)):
+def update_webhook(board_id: str, hook_id: str, data: WebhookUpdate, _: User = Depends(require_board_access), db: Session = Depends(get_db)):
     """Fix 3a: Update a webhook URL, event type, or active flag."""
     hook = db.query(Webhook).filter(Webhook.id == hook_id, Webhook.board_id == board_id).first()
     if not hook:
@@ -411,7 +434,7 @@ def update_webhook(board_id: str, hook_id: str, data: WebhookUpdate, db: Session
 
 
 @router.delete("/{board_id}/webhooks/{hook_id}")
-def delete_webhook(board_id: str, hook_id: str, db: Session = Depends(get_db)):
+def delete_webhook(board_id: str, hook_id: str, _: User = Depends(require_board_access), db: Session = Depends(get_db)):
     """Fix 3b: Delete a webhook."""
     hook = db.query(Webhook).filter(Webhook.id == hook_id, Webhook.board_id == board_id).first()
     if not hook:
