@@ -11,6 +11,7 @@ from app.models.board import (
 from app.schemas.requests import (
     AssessorCreate, AssessorUpdate, AssessmentCreate, SubmissionCreate, TriggerAssessmentComplete
 )
+from app.models.board import log_config_change
 from app.services.scoring_engine import (
     calculate_form_score, calculate_final_audit_score, calculate_cumulative_rating, get_star_rating
 )
@@ -42,10 +43,26 @@ def update_assessor(board_id: str, assessor_id: str, data: AssessorUpdate, db: S
     assessor = db.query(Assessor).filter(Assessor.id == assessor_id, Assessor.board_id == board_id).first()
     if not assessor:
         raise HTTPException(404, "Assessor not found")
-    for field, value in data.dict(exclude_none=True).items():
+    changes = data.dict(exclude_none=True)
+    for field, value in changes.items():
         setattr(assessor, field, value)
+    log_config_change(db, board_id, "ASSESSOR_UPDATED", "assessor", assessor_id, changes)
     db.commit()
     return _assessor_dict(assessor)
+
+
+@router.delete("/boards/{board_id}/assessors/{assessor_id}", status_code=200)
+def deactivate_assessor(board_id: str, assessor_id: str, db: Session = Depends(get_db)):
+    """Fix 8: Soft-delete — sets is_active=False. Hard delete is blocked because assessors
+    are referenced in historical FormSubmissions and AuditScores."""
+    assessor = db.query(Assessor).filter(Assessor.id == assessor_id, Assessor.board_id == board_id).first()
+    if not assessor:
+        raise HTTPException(404, "Assessor not found")
+    assessor.is_active = False
+    log_config_change(db, board_id, "ASSESSOR_DEACTIVATED", "assessor", assessor_id,
+                      {"name": assessor.name, "employee_id": assessor.employee_id})
+    db.commit()
+    return {"deactivated": True, "id": assessor_id}
 
 
 # --- Assessments ---

@@ -218,11 +218,15 @@
                 <div class="space-y-2">
                     <template x-for="ec in form.essential_criteria || []" :key="ec.id">
                         <div class="flex items-start justify-between p-2.5 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-100 dark:border-red-800 group">
-                            <div class="flex items-start space-x-2">
+                            <div class="flex items-start space-x-2 flex-1 min-w-0">
                                 <svg class="w-3.5 h-3.5 text-red-500 dark:text-red-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                                 </svg>
-                                <span class="text-xs font-medium text-red-800 dark:text-red-300" x-text="ec.label"></span>
+                                <span class="text-xs font-medium text-red-800 dark:text-red-300 leading-relaxed" x-text="ec.label"></span>
+                            </div>
+                            <div class="flex items-center space-x-2 ml-3 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button @click="openEditEssential(ec)" class="text-qci-accent hover:text-blue-700 text-xs font-medium">Edit</button>
+                                <button @click="deleteEssential(ec.id)" class="text-red-500 hover:text-red-700 text-xs">✕</button>
                             </div>
                         </div>
                     </template>
@@ -454,6 +458,56 @@
         </div>
     </div>
 </div>
+
+<!-- Edit Essential Criterion Modal -->
+<div x-show="showEditEssential"
+     x-transition:enter="transition ease-out duration-150"
+     x-transition:enter-start="opacity-0"
+     x-transition:enter-end="opacity-100"
+     x-transition:leave="transition ease-in duration-100"
+     x-transition:leave-start="opacity-100"
+     x-transition:leave-end="opacity-0"
+     class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" @click.self="showEditEssential = false">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md">
+        <div class="px-6 py-5 border-b border-gray-100 dark:border-gray-700">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Edit Essential Criterion</h3>
+        </div>
+        <div class="px-6 py-5 space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Label <span class="text-red-500">*</span></label>
+                <input x-model="editEssential.label"
+                       @input="editEssential.code = toCode(editEssential.label)"
+                       @keydown.enter.prevent="saveEditEssential()"
+                       type="text"
+                       placeholder="e.g. Maintains professional ethics and conduct"
+                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-qci-accent focus:border-transparent">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Code</label>
+                <input x-model="editEssential.code"
+                       type="text"
+                       placeholder="Auto-generated from label"
+                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-qci-accent focus:border-transparent font-mono">
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Unique identifier, auto-filled from label</p>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Sort Order</label>
+                <input x-model.number="editEssential.sort_order"
+                       type="number" min="0"
+                       class="w-24 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-qci-accent focus:border-transparent">
+            </div>
+        </div>
+        <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-700 flex justify-end space-x-3">
+            <button @click="showEditEssential = false"
+                    class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">Cancel</button>
+            <button @click="saveEditEssential()"
+                    :disabled="!editEssential.label || !editEssential.label.trim()"
+                    class="px-5 py-2 bg-qci-accent text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                Save Changes
+            </button>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -462,6 +516,7 @@ function formBuilder(boardCode, formId) {
     return {
         boardCode, boardId: '', form: {},
         showAddParam: false, showAddEssential: false,
+        showEditEssential: false, editEssentialId: null, editEssential: {},
         showAdvanced: false, showEssentialAdvanced: false,
         paramError: '', essentialError: '',
         newParam: { code: '', label: '', weight: 10, data_type: 'RATING_1_5', is_mandatory: true, parent_id: null, sort_order: 0 },
@@ -563,6 +618,27 @@ function formBuilder(boardCode, formId) {
             this.showAddEssential = false;
             this.showEssentialAdvanced = false;
             this.newEssential = { code: '', label: '', sort_order: 0 };
+            await this.reload();
+        },
+
+        openEditEssential(ec) {
+            this.editEssentialId = ec.id;
+            this.editEssential = { code: ec.code, label: ec.label, sort_order: ec.sort_order };
+            this.showEditEssential = true;
+        },
+
+        async saveEditEssential() {
+            if (!this.editEssential.label.trim()) return;
+            await api.put('/api/v1/boards/' + this.boardId + '/forms/' + formId + '/essentials/' + this.editEssentialId, this.editEssential);
+            this.showEditEssential = false;
+            this.editEssentialId = null;
+            this.editEssential = {};
+            await this.reload();
+        },
+
+        async deleteEssential(ecId) {
+            if (!confirm('Delete this essential criterion? This cannot be undone.')) return;
+            await api.del('/api/v1/boards/' + this.boardId + '/forms/' + formId + '/essentials/' + ecId);
             await this.reload();
         },
     };

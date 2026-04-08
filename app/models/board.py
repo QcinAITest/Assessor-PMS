@@ -60,6 +60,8 @@ class BoardRole(Base):
     description = Column(Text)
     can_be_evaluator = Column(Boolean, default=False)
     can_be_evaluee = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     board = relationship("Board", back_populates="roles")
 
@@ -138,6 +140,8 @@ class EssentialCriterion(Base):
     code = Column(String(50), nullable=False)
     label = Column(String(500), nullable=False)
     sort_order = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     form_template = relationship("FormTemplate", back_populates="essential_criteria")
 
@@ -158,6 +162,8 @@ class FrequencyRule(Base):
                           doc="EVERY_AUDIT | POST_N_AUDITS | QUARTERLY | ANNUALLY | ON_EVENT")
     trigger_value = Column(Integer, nullable=True, doc="N for POST_N_AUDITS")
     is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     board = relationship("Board", back_populates="frequency_rules")
     form_template = relationship("FormTemplate")
@@ -178,6 +184,7 @@ class Assessor(Base):
     audit_count = Column(Integer, default=0)
     metadata_ = Column("metadata", JSON, default=dict)
     created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     board = relationship("Board")
 
@@ -279,6 +286,7 @@ class Webhook(Base):
     secret = Column(String(200))
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     board = relationship("Board", back_populates="webhooks")
 
@@ -310,14 +318,15 @@ class PortalAdapter(Base):
 
 class AuditLog(Base):
     """
-    Persists every inbound trigger received and every outbound dispatch sent.
-    Provides full traceability for every integration event.
+    Persists every inbound trigger, outbound dispatch, and internal config change.
+    Provides full traceability for every integration and administrative event.
+    direction: INBOUND | OUTBOUND | SYSTEM
     """
     __tablename__ = "audit_logs"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     board_id = Column(String(36), ForeignKey("boards.id"), nullable=True)
-    direction = Column(String(10), nullable=False, doc="INBOUND | OUTBOUND")
+    direction = Column(String(10), nullable=False, doc="INBOUND | OUTBOUND | SYSTEM")
     event_type = Column(String(50))
     portal_id = Column(String(100), nullable=True, doc="Source portal for INBOUND; target for OUTBOUND")
     assessment_id = Column(String(36), nullable=True)
@@ -327,3 +336,19 @@ class AuditLog(Base):
                     doc="received | processed | failed | dispatched")
     error = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+def log_config_change(db, board_id: str, event_type: str, entity: str, entity_id, changes: dict):
+    """
+    Write a SYSTEM-direction AuditLog row for any config-level mutation
+    (form edit, role edit, webhook change, etc.).
+    Call before db.commit() so the log is part of the same transaction.
+    """
+    entry = AuditLog(
+        board_id=board_id,
+        direction="SYSTEM",
+        event_type=event_type,
+        status="processed",
+        raw_payload={"entity": entity, "entity_id": str(entity_id), "changes": changes},
+    )
+    db.add(entry)

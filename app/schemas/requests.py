@@ -104,3 +104,22 @@ class WebhookCreate(BaseModel):
     event_type: str
     target_url: str
     secret: Optional[str] = None
+
+
+class WebhookUpdate(BaseModel):
+    event_type: Optional[str] = None
+    target_url: Optional[str] = None
+    secret: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+class EssentialCriterionUpdate(BaseModel):
+    label: Optional[str] = None
+    code: Optional[str] = None
+    sort_order: Optional[int] = None
+
+
+class FrequencyRuleUpdate(BaseModel):
+    trigger_type: Optional[str] = None
+    trigger_value: Optional[int] = None
+    is_active: Optional[bool] = None

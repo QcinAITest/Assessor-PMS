@@ -6,11 +6,13 @@ import uuid
 from app.database import get_db
 from app.models.board import (
     Board, BoardRole, FormTemplate, Parameter, EssentialCriterion,
-    FrequencyRule, Webhook, FormSubmission
+    FrequencyRule, Webhook, FormSubmission, log_config_change
 )
 from app.schemas.requests import (
     BoardCreate, BoardUpdate, RoleMapping, FormTemplateCreate,
-    ParameterCreate, EssentialCriterionCreate, FrequencyRuleCreate, WebhookCreate
+    ParameterCreate, EssentialCriterionCreate, EssentialCriterionUpdate,
+    FrequencyRuleCreate, FrequencyRuleUpdate,
+    WebhookCreate, WebhookUpdate
 )
 from app.services.scoring_engine import normalize_weights
 
@@ -42,8 +44,10 @@ def get_board(board_id: str, db: Session = Depends(get_db)):
 @router.put("/{board_id}")
 def update_board(board_id: str, data: BoardUpdate, db: Session = Depends(get_db)):
     board = _get_board(db, board_id)
-    for k, v in data.dict(exclude_none=True).items():
+    changes = data.dict(exclude_none=True)
+    for k, v in changes.items():
         setattr(board, k, v)
+    log_config_change(db, board.id, "BOARD_UPDATED", "board", board.id, changes)
     db.commit()
     return _board_detail(db, board)
 
@@ -62,6 +66,7 @@ def add_role(board_id: str, data: RoleMapping, db: Session = Depends(get_db)):
     board = _get_board(db, board_id)
     role = BoardRole(board_id=board.id, **data.dict())
     db.add(role)
+    log_config_change(db, board.id, "ROLE_CREATED", "board_role", "new", data.dict())
     db.commit()
     return {"id": role.id, "system_role_id": role.system_role_id, "display_label": role.display_label}
 
@@ -71,8 +76,10 @@ def update_role(board_id: str, role_id: int, data: RoleMapping, db: Session = De
     role = db.query(BoardRole).filter(BoardRole.id == role_id, BoardRole.board_id == board_id).first()
     if not role:
         raise HTTPException(404, "Role not found")
-    for k, v in data.dict().items():
+    changes = data.dict()
+    for k, v in changes.items():
         setattr(role, k, v)
+    log_config_change(db, board_id, "ROLE_UPDATED", "board_role", role_id, changes)
     db.commit()
     return {"id": role.id, "system_role_id": role.system_role_id, "display_label": role.display_label}
 
@@ -82,6 +89,8 @@ def delete_role(board_id: str, role_id: int, db: Session = Depends(get_db)):
     role = db.query(BoardRole).filter(BoardRole.id == role_id, BoardRole.board_id == board_id).first()
     if not role:
         raise HTTPException(404, "Role not found")
+    log_config_change(db, board_id, "ROLE_DELETED", "board_role", role_id,
+                      {"system_role_id": role.system_role_id, "display_label": role.display_label})
     db.delete(role)
     db.commit()
     return {"deleted": True}
@@ -109,6 +118,7 @@ def create_form(board_id: str, data: FormTemplateCreate, db: Session = Depends(g
         )
     ft = FormTemplate(id=str(uuid.uuid4()), board_id=board.id, **data.dict())
     db.add(ft)
+    log_config_change(db, board.id, "FORM_CREATED", "form_template", ft.id, data.dict())
     db.commit()
     return _form_detail(ft)
 
@@ -136,10 +146,42 @@ def update_form(board_id: str, form_id: str, data: FormTemplateCreate, db: Sessi
             f"This weight would push the total to {round(new_total * 100, 1)}% — "
             f"over the 100% limit by {over_pct}%. Adjust other form weights first."
         )
-    for k, v in data.dict().items():
+    changes = data.dict()
+    for k, v in changes.items():
         setattr(ft, k, v)
+    ft.version = (ft.version or 1) + 1   # Fix 4: increment version on every update
+    log_config_change(db, board_id, "FORM_UPDATED", "form_template", form_id,
+                      {**changes, "new_version": ft.version})
     db.commit()
     return _form_detail(ft)
+
+
+@router.delete("/{board_id}/forms/{form_id}")
+def delete_form(board_id: str, form_id: str, db: Session = Depends(get_db)):
+    """Fix 1: Delete a form template. Blocked if real submissions exist."""
+    ft = db.query(FormTemplate).filter(FormTemplate.id == form_id, FormTemplate.board_id == board_id).first()
+    if not ft:
+        raise HTTPException(404, "Form template not found")
+    # Count submissions that were actually submitted (not just distribute-link stubs)
+    submitted_count = (
+        db.query(FormSubmission)
+        .filter(
+            FormSubmission.form_template_id == form_id,
+            FormSubmission.assessment_id.isnot(None),
+        )
+        .count()
+    )
+    if submitted_count > 0:
+        raise HTTPException(
+            409,
+            f"Cannot delete '{ft.name}' — it has {submitted_count} submission(s) attached. "
+            f"Deactivate it instead by setting is_active=false."
+        )
+    log_config_change(db, board_id, "FORM_DELETED", "form_template", form_id,
+                      {"code": ft.code, "name": ft.name})
+    db.delete(ft)
+    db.commit()
+    return {"deleted": True}
 
 
 # --- Parameters ---
@@ -148,7 +190,6 @@ def add_parameter(board_id: str, form_id: str, data: ParameterCreate, db: Sessio
     ft = db.query(FormTemplate).filter(FormTemplate.id == form_id, FormTemplate.board_id == board_id).first()
     if not ft:
         raise HTTPException(404, "Form template not found")
-    # Only top-level parameters (no parent) carry weights that must sum to 100
     if data.parent_id is None:
         existing_weight = sum(p.weight or 0 for p in ft.parameters if p.parent_id is None)
         new_total = round(existing_weight + (data.weight or 0), 10)
@@ -163,7 +204,7 @@ def add_parameter(board_id: str, form_id: str, data: ParameterCreate, db: Sessio
     param = Parameter(id=str(uuid.uuid4()), form_template_id=form_id, **data.dict())
     db.add(param)
     db.commit()
-    db.expire(ft)  # bust cache so ft.parameters reflects the new row
+    db.expire(ft)
     top_weight_total = round(sum(p.weight or 0 for p in ft.parameters if p.parent_id is None), 10)
     return {
         "id": param.id, "code": param.code, "label": param.label, "weight": param.weight,
@@ -245,8 +286,47 @@ def add_essential(board_id: str, form_id: str, data: EssentialCriterionCreate, d
         raise HTTPException(404, "Form template not found")
     ec = EssentialCriterion(id=str(uuid.uuid4()), form_template_id=form_id, **data.dict())
     db.add(ec)
+    log_config_change(db, board_id, "ESSENTIAL_CREATED", "essential_criterion", ec.id, data.dict())
     db.commit()
     return {"id": ec.id, "code": ec.code, "label": ec.label}
+
+
+@router.put("/{board_id}/forms/{form_id}/essentials/{ec_id}")
+def update_essential(board_id: str, form_id: str, ec_id: str,
+                     data: EssentialCriterionUpdate, db: Session = Depends(get_db)):
+    """Fix 2a: Update an essential criterion."""
+    ft = db.query(FormTemplate).filter(FormTemplate.id == form_id, FormTemplate.board_id == board_id).first()
+    if not ft:
+        raise HTTPException(404, "Form template not found")
+    ec = db.query(EssentialCriterion).filter(
+        EssentialCriterion.id == ec_id, EssentialCriterion.form_template_id == form_id
+    ).first()
+    if not ec:
+        raise HTTPException(404, "Essential criterion not found")
+    changes = data.dict(exclude_none=True)
+    for k, v in changes.items():
+        setattr(ec, k, v)
+    log_config_change(db, board_id, "ESSENTIAL_UPDATED", "essential_criterion", ec_id, changes)
+    db.commit()
+    return {"id": ec.id, "code": ec.code, "label": ec.label, "sort_order": ec.sort_order}
+
+
+@router.delete("/{board_id}/forms/{form_id}/essentials/{ec_id}")
+def delete_essential(board_id: str, form_id: str, ec_id: str, db: Session = Depends(get_db)):
+    """Fix 2b: Delete an essential criterion."""
+    ft = db.query(FormTemplate).filter(FormTemplate.id == form_id, FormTemplate.board_id == board_id).first()
+    if not ft:
+        raise HTTPException(404, "Form template not found")
+    ec = db.query(EssentialCriterion).filter(
+        EssentialCriterion.id == ec_id, EssentialCriterion.form_template_id == form_id
+    ).first()
+    if not ec:
+        raise HTTPException(404, "Essential criterion not found")
+    log_config_change(db, board_id, "ESSENTIAL_DELETED", "essential_criterion", ec_id,
+                      {"code": ec.code, "label": ec.label})
+    db.delete(ec)
+    db.commit()
+    return {"deleted": True}
 
 
 # --- Frequency Rules ---
@@ -263,8 +343,25 @@ def add_frequency_rule(board_id: str, data: FrequencyRuleCreate, db: Session = D
     _get_board(db, board_id)
     rule = FrequencyRule(board_id=board_id, **data.dict())
     db.add(rule)
+    log_config_change(db, board_id, "FREQ_RULE_CREATED", "frequency_rule", "new", data.dict())
     db.commit()
     return {"id": rule.id, "trigger_type": rule.trigger_type}
+
+
+@router.put("/{board_id}/frequency-rules/{rule_id}")
+def update_frequency_rule(board_id: str, rule_id: int, data: FrequencyRuleUpdate,
+                          db: Session = Depends(get_db)):
+    """Fix 5: Update trigger type / value / active status of a frequency rule."""
+    rule = db.query(FrequencyRule).filter(FrequencyRule.id == rule_id, FrequencyRule.board_id == board_id).first()
+    if not rule:
+        raise HTTPException(404, "Rule not found")
+    changes = data.dict(exclude_none=True)
+    for k, v in changes.items():
+        setattr(rule, k, v)
+    log_config_change(db, board_id, "FREQ_RULE_UPDATED", "frequency_rule", rule_id, changes)
+    db.commit()
+    return {"id": rule.id, "trigger_type": rule.trigger_type,
+            "trigger_value": rule.trigger_value, "is_active": rule.is_active}
 
 
 @router.delete("/{board_id}/frequency-rules/{rule_id}")
@@ -272,6 +369,8 @@ def delete_frequency_rule(board_id: str, rule_id: int, db: Session = Depends(get
     rule = db.query(FrequencyRule).filter(FrequencyRule.id == rule_id, FrequencyRule.board_id == board_id).first()
     if not rule:
         raise HTTPException(404, "Rule not found")
+    log_config_change(db, board_id, "FREQ_RULE_DELETED", "frequency_rule", rule_id,
+                      {"role_id": rule.role_id, "trigger_type": rule.trigger_type})
     db.delete(rule)
     db.commit()
     return {"deleted": True}
@@ -290,8 +389,38 @@ def add_webhook(board_id: str, data: WebhookCreate, db: Session = Depends(get_db
     _get_board(db, board_id)
     hook = Webhook(id=str(uuid.uuid4()), board_id=board_id, **data.dict())
     db.add(hook)
+    log_config_change(db, board_id, "WEBHOOK_CREATED", "webhook", hook.id,
+                      {"event_type": data.event_type, "target_url": data.target_url})
     db.commit()
     return {"id": hook.id, "event_type": hook.event_type, "target_url": hook.target_url}
+
+
+@router.put("/{board_id}/webhooks/{hook_id}")
+def update_webhook(board_id: str, hook_id: str, data: WebhookUpdate, db: Session = Depends(get_db)):
+    """Fix 3a: Update a webhook URL, event type, or active flag."""
+    hook = db.query(Webhook).filter(Webhook.id == hook_id, Webhook.board_id == board_id).first()
+    if not hook:
+        raise HTTPException(404, "Webhook not found")
+    changes = data.dict(exclude_none=True)
+    for k, v in changes.items():
+        setattr(hook, k, v)
+    log_config_change(db, board_id, "WEBHOOK_UPDATED", "webhook", hook_id, changes)
+    db.commit()
+    return {"id": hook.id, "event_type": hook.event_type, "target_url": hook.target_url,
+            "is_active": hook.is_active}
+
+
+@router.delete("/{board_id}/webhooks/{hook_id}")
+def delete_webhook(board_id: str, hook_id: str, db: Session = Depends(get_db)):
+    """Fix 3b: Delete a webhook."""
+    hook = db.query(Webhook).filter(Webhook.id == hook_id, Webhook.board_id == board_id).first()
+    if not hook:
+        raise HTTPException(404, "Webhook not found")
+    log_config_change(db, board_id, "WEBHOOK_DELETED", "webhook", hook_id,
+                      {"event_type": hook.event_type, "target_url": hook.target_url})
+    db.delete(hook)
+    db.commit()
+    return {"deleted": True}
 
 
 # --- Helpers ---
@@ -319,7 +448,9 @@ def _board_detail(db: Session, b: Board):
                     "can_be_evaluator": r.can_be_evaluator, "can_be_evaluee": r.can_be_evaluee}
                    for r in b.roles],
         "form_templates": [_form_summary(f) for f in b.form_templates],
-        "frequency_rules": [{"id": r.id, "role_id": r.role_id, "trigger_type": r.trigger_type}
+        "frequency_rules": [{"id": r.id, "role_id": r.role_id, "trigger_type": r.trigger_type,
+                              "trigger_value": r.trigger_value, "is_active": r.is_active,
+                              "form_template_id": r.form_template_id}
                             for r in b.frequency_rules],
     }
 
@@ -330,6 +461,7 @@ def _form_summary(f: FormTemplate):
         "stakeholder_weight": f.stakeholder_weight,
         "is_mandatory": f.is_mandatory, "is_active": f.is_active,
         "parameters_count": len(f.parameters),
+        "version": f.version,
     }
 
 
@@ -340,8 +472,10 @@ def _form_detail(f: FormTemplate):
         "target_evaluator_role": f.target_evaluator_role,
         "target_evaluee_roles": f.target_evaluee_roles,
         "is_mandatory": f.is_mandatory, "is_active": f.is_active,
+        "version": f.version,
         "parameters": [_param_tree(p) for p in f.parameters if p.is_top_level],
-        "essential_criteria": [{"id": e.id, "code": e.code, "label": e.label}
+        "essential_criteria": [{"id": e.id, "code": e.code, "label": e.label,
+                                 "sort_order": e.sort_order}
                                for e in f.essential_criteria],
     }
 

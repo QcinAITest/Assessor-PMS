@@ -225,7 +225,15 @@
                                           x-text="a.is_active ? 'Active' : 'Inactive'"></span>
                                 </td>
                                 <td class="px-4 py-3">
-                                    <button @click="openEditAssessor(a)" class="text-qci-accent hover:text-blue-700 text-xs font-medium">Edit</button>
+                                    <div class="flex items-center space-x-3">
+                                        <button @click="openEditAssessor(a)" class="text-qci-accent hover:text-blue-700 text-xs font-medium">Edit</button>
+                                        <button @click="deactivateAssessor(a)"
+                                                class="text-xs font-medium"
+                                                :class="a.is_active ? 'text-red-500 hover:text-red-700' : 'text-gray-400 dark:text-gray-500 cursor-default'"
+                                                :disabled="!a.is_active"
+                                                x-text="a.is_active ? 'Deactivate' : 'Inactive'">
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         </template>
@@ -459,6 +467,8 @@
                                 Copy Link
                             </button>
                             <span x-show="copiedFormId === ft.id" class="text-xs text-emerald-600 dark:text-emerald-400">✓ Copied!</span>
+                            <button @click="deleteForm(ft.id, ft.name)"
+                                    class="text-red-500 hover:text-red-700 text-xs ml-auto">Delete</button>
                         </div>
                     </div>
                 </template>
@@ -626,12 +636,54 @@
                             <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 mr-2" x-text="hook.event_type"></span>
                             <code class="text-sm text-gray-600 dark:text-gray-400" x-text="hook.target_url"></code>
                         </div>
-                        <span :class="hook.is_active ? 'text-green-500 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'" x-text="hook.is_active ? 'Active' : 'Inactive'"></span>
+                        <div class="flex items-center space-x-3">
+                            <span :class="hook.is_active ? 'text-green-500 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'"
+                                  class="text-xs" x-text="hook.is_active ? 'Active' : 'Inactive'"></span>
+                            <button @click="openEditWebhook(hook)" class="text-qci-accent hover:text-blue-700 text-xs font-medium">Edit</button>
+                            <button @click="deleteWebhook(hook.id)" class="text-red-500 hover:text-red-700 text-xs">Delete</button>
+                        </div>
                     </div>
                 </template>
                 <div x-show="webhooks.length === 0" class="text-center py-8 text-gray-400 dark:text-gray-500 text-sm">No webhooks configured.</div>
             </div>
         </div>
+        <!-- Edit Webhook modal -->
+        <div x-show="showEditWebhook" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" @click.self="showEditWebhook=false">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-md">
+                <h3 class="text-lg font-semibold dark:text-white mb-4">Edit Webhook</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Event Type</label>
+                        <select x-model="editWebhook.event_type"
+                                class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                            <option value="ASSESSMENT_CREATED">Assessment Created</option>
+                            <option value="FEEDBACK_DUE">Feedback Due</option>
+                            <option value="SCORE_CALCULATED">Score Calculated</option>
+                            <option value="ESSENTIAL_FLAGGED">Essential Criteria Flagged</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Target URL</label>
+                        <input x-model="editWebhook.target_url" type="url"
+                               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Secret (optional)</label>
+                        <input x-model="editWebhook.secret" type="text" placeholder="leave blank to keep current"
+                               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <input type="checkbox" x-model="editWebhook.is_active" id="wh-active" class="rounded">
+                        <label for="wh-active" class="text-sm text-gray-700 dark:text-gray-300">Active</label>
+                    </div>
+                </div>
+                <div class="mt-6 flex justify-end space-x-3">
+                    <button @click="showEditWebhook=false" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">Cancel</button>
+                    <button @click="saveEditWebhook()" class="px-4 py-2 bg-qci-accent text-white text-sm rounded-lg hover:bg-blue-700">Save Changes</button>
+                </div>
+            </div>
+        </div>
+
         <div x-show="showAddWebhook" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" @click.self="showAddWebhook=false">
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-md">
                 <h3 class="text-lg font-semibold dark:text-white mb-4">Add Webhook</h3>
@@ -680,7 +732,10 @@
                     <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                         <div class="flex items-center justify-between mb-3">
                             <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300" x-text="adapter.portal_id"></span>
-                            <button @click="deleteAdapter(adapter.id)" class="text-red-500 hover:text-red-700 text-xs">Delete</button>
+                            <div class="flex items-center space-x-3">
+                                <button @click="openEditAdapter(adapter)" class="text-qci-accent hover:text-blue-700 text-xs font-medium">Edit</button>
+                                <button @click="deleteAdapter(adapter.id)" class="text-red-500 hover:text-red-700 text-xs">Delete</button>
+                            </div>
                         </div>
                         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
                             <div>
@@ -719,6 +774,39 @@
                 <div x-show="portalAdapters.length===0" class="text-center py-8 text-gray-400 dark:text-gray-500 text-sm">No adapters configured.</div>
             </div>
         </div>
+        <!-- Edit Portal Adapter modal -->
+        <div x-show="showEditAdapter" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" @click.self="showEditAdapter=false; adapterError=''">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+                <h3 class="text-lg font-semibold dark:text-white mb-4">Edit Portal Adapter</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Role Map (JSON)</label>
+                        <textarea x-model="editAdapter.role_map_json" rows="3"
+                                  class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm font-mono bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Event Map (JSON)</label>
+                        <textarea x-model="editAdapter.event_map_json" rows="3"
+                                  class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm font-mono bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Vocabulary Map (JSON)</label>
+                        <textarea x-model="editAdapter.vocabulary_map_json" rows="2"
+                                  class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm font-mono bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"></textarea>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <input type="checkbox" x-model="editAdapter.is_active" id="adapter-active" class="rounded">
+                        <label for="adapter-active" class="text-sm text-gray-700 dark:text-gray-300">Active</label>
+                    </div>
+                    <span x-show="adapterError" class="text-red-500 dark:text-red-400 text-xs" x-text="adapterError"></span>
+                </div>
+                <div class="mt-6 flex justify-end space-x-3">
+                    <button @click="showEditAdapter=false; adapterError=''" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">Cancel</button>
+                    <button @click="saveEditAdapter()" class="px-4 py-2 bg-qci-accent text-white text-sm rounded-lg hover:bg-blue-700">Save Changes</button>
+                </div>
+            </div>
+        </div>
+
         <div x-show="showAddAdapter" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" @click.self="showAddAdapter=false">
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
                 <h3 class="text-lg font-semibold dark:text-white mb-4">Add Portal Adapter</h3>
@@ -832,6 +920,8 @@ function boardAdmin(boardCode) {
         showAddSL: false, showAddProgram: false, addingProgramTo: null,
         showEditRole: false, editRole: {}, editRoleId: null,
         showEditAssessor: false, editAssessor: {}, editAssessorId: null,
+        showEditWebhook: false, editWebhook: {}, editWebhookId: null,
+        showEditAdapter: false, editAdapter: {}, editAdapterId: null,
         copiedFormId: null,
         newRole: { system_role_id: '', display_label: '', can_be_evaluator: false, can_be_evaluee: true },
         newForm: { code: '', name: '', stakeholder_weight: 0.20, target_evaluator_role: '', is_mandatory: true },
@@ -939,6 +1029,15 @@ function boardAdmin(boardCode) {
                 this.formError = e.message || 'Failed to add form. Please try again.';
             }
         },
+        async deleteForm(formId, formName) {
+            if (!confirm('Delete form "' + formName + '"?\n\nThis is blocked if submissions exist — deactivate the form instead if it has been used.')) return;
+            try {
+                await api.del('/api/v1/boards/' + this.board.id + '/forms/' + formId);
+                this.board = await api.get('/api/v1/boards/' + boardCode);
+            } catch(e) {
+                alert(e.message || 'Could not delete form.');
+            }
+        },
         async addFreqRule() {
             await api.post('/api/v1/boards/' + this.board.id + '/frequency-rules', this.newFreq);
             this.showAddFreq = false; this.board = await api.get('/api/v1/boards/' + boardCode);
@@ -949,6 +1048,23 @@ function boardAdmin(boardCode) {
             await api.post('/api/v1/boards/' + this.board.id + '/webhooks', this.newWebhook);
             this.showAddWebhook = false; this.webhooks = await api.get('/api/v1/boards/' + this.board.id + '/webhooks');
         },
+        openEditWebhook(hook) {
+            this.editWebhookId = hook.id;
+            this.editWebhook = { event_type: hook.event_type, target_url: hook.target_url, secret: '', is_active: hook.is_active };
+            this.showEditWebhook = true;
+        },
+        async saveEditWebhook() {
+            const payload = { event_type: this.editWebhook.event_type, target_url: this.editWebhook.target_url, is_active: this.editWebhook.is_active };
+            if (this.editWebhook.secret) payload.secret = this.editWebhook.secret;
+            await api.put('/api/v1/boards/' + this.board.id + '/webhooks/' + this.editWebhookId, payload);
+            this.showEditWebhook = false;
+            this.webhooks = await api.get('/api/v1/boards/' + this.board.id + '/webhooks');
+        },
+        async deleteWebhook(id) {
+            if (!confirm('Delete this webhook?')) return;
+            await api.del('/api/v1/boards/' + this.board.id + '/webhooks/' + id);
+            this.webhooks = await api.get('/api/v1/boards/' + this.board.id + '/webhooks');
+        },
         async addAdapter() {
             this.adapterError = '';
             try {
@@ -958,7 +1074,37 @@ function boardAdmin(boardCode) {
                 this.portalAdapters = await api.get('/api/v1/boards/' + this.board.id + '/portal-adapters');
             } catch(e) { this.adapterError = 'Invalid JSON: ' + e.message; }
         },
+        openEditAdapter(adapter) {
+            this.editAdapterId = adapter.id;
+            this.editAdapter = {
+                role_map_json: JSON.stringify(adapter.role_map || {}, null, 2),
+                event_map_json: JSON.stringify(adapter.event_map || {}, null, 2),
+                vocabulary_map_json: JSON.stringify(adapter.vocabulary_map || {}, null, 2),
+                is_active: adapter.is_active,
+            };
+            this.showEditAdapter = true;
+        },
+        async saveEditAdapter() {
+            this.adapterError = '';
+            try {
+                const p = {
+                    role_map: JSON.parse(this.editAdapter.role_map_json || '{}'),
+                    event_map: JSON.parse(this.editAdapter.event_map_json || '{}'),
+                    vocabulary_map: JSON.parse(this.editAdapter.vocabulary_map_json || '{}'),
+                    is_active: this.editAdapter.is_active,
+                };
+                await api.put('/api/v1/boards/' + this.board.id + '/portal-adapters/' + this.editAdapterId, p);
+                this.showEditAdapter = false;
+                this.portalAdapters = await api.get('/api/v1/boards/' + this.board.id + '/portal-adapters');
+            } catch(e) { this.adapterError = 'Invalid JSON: ' + e.message; }
+        },
         async deleteAdapter(id) { await api.del('/api/v1/boards/' + this.board.id + '/portal-adapters/' + id); this.portalAdapters = await api.get('/api/v1/boards/' + this.board.id + '/portal-adapters'); },
+        async deactivateAssessor(a) {
+            if (!a.is_active) return;
+            if (!confirm('Deactivate ' + a.name + '? Their history is preserved.')) return;
+            await api.del('/api/v1/boards/' + this.board.id + '/assessors/' + a.id);
+            this.assessors = await api.get('/api/v1/boards/' + this.board.id + '/assessors');
+        },
 
         async loadAuditLogs() {
             const qs = this.logFilter ? '?direction=' + this.logFilter : '';
