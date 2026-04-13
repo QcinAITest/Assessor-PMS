@@ -17,6 +17,7 @@ from app.api.assessments import router as assessments_router
 from app.api.integration import router as integration_router
 from app.api.auth import router as auth_router
 from app.api.programs import router as programs_router, public_router
+from app.api.sync import router as sync_router
 
 Base.metadata.create_all(bind=engine)
 
@@ -32,6 +33,7 @@ app.include_router(assessments_router)
 app.include_router(integration_router)
 app.include_router(programs_router)
 app.include_router(public_router)
+app.include_router(sync_router)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")

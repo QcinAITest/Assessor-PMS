@@ -123,3 +123,31 @@ class FrequencyRuleUpdate(BaseModel):
     trigger_type: Optional[str] = None
     trigger_value: Optional[int] = None
     is_active: Optional[bool] = None
+
+
+# --- Sync schemas ---
+
+class AssessorSyncItem(BaseModel):
+    employee_id: str
+    name: str
+    email: Optional[str] = None
+    role_id: str
+    is_active: bool = True
+
+
+class AssessorSyncRequest(BaseModel):
+    portal_id: Optional[str] = None          # used to look up PortalAdapter.role_map
+    deactivate_missing: bool = False          # soft-delete assessors absent from payload
+    assessors: List[AssessorSyncItem]
+
+
+class UserSyncItem(BaseModel):
+    email: str
+    full_name: str
+    role: str = "BOARD_ADMIN"
+    board_code: Optional[str] = None
+    external_id: Optional[str] = None
+
+
+class UserSyncRequest(BaseModel):
+    users: List[UserSyncItem]

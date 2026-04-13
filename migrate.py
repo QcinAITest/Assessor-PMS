@@ -64,6 +64,12 @@ def migrate():
         cur.execute("ALTER TABLE assessors ADD COLUMN updated_at DATETIME")
         print("assessors.updated_at added")
 
+    # --- users: add external_id for portal sync anchor ---
+    cols = columns("users")
+    if "external_id" not in cols:
+        cur.execute("ALTER TABLE users ADD COLUMN external_id VARCHAR(100)")
+        print("users.external_id added")
+
     # --- form_submissions: recreate to make assessment_id/evaluator_id/evaluee_id nullable ---
     # Safe because there are no real submissions in a fresh dev DB.
     cur.execute("SELECT COUNT(*) FROM form_submissions")

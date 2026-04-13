@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey
+from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Index
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -19,5 +19,7 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     last_login = Column(DateTime, nullable=True)
+    external_id = Column(String(100), nullable=True, index=True,
+                         doc="QCI portal user ID — used as sync anchor")
 
     board = relationship("Board")
