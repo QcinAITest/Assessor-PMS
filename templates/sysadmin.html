@@ -30,6 +30,12 @@
     <!-- BOARDS & USERS TAB -->
     <div x-show="activeTab === 'Boards & Users'">
 
+        <!-- Explainer -->
+        <div class="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg text-sm text-blue-800 dark:text-blue-300">
+            <strong>Admin login accounts</strong> — these users log into this portal to configure forms, roles, and assessors for their board.
+            They are <em>not</em> assessors. Assessors are managed per-board under the Assessors tab within each board's settings.
+        </div>
+
         <!-- Board cards with linked users -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             <template x-for="board in boards" :key="board.id">
@@ -51,7 +57,7 @@
 
                     <!-- Board admins -->
                     <div class="space-y-1.5">
-                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Board Admins (AMC)</p>
+                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Portal Login Access</p>
                         <template x-for="u in boardUsers(board.id)" :key="u.id">
                             <div class="flex items-center justify-between bg-gray-50 dark:bg-gray-700 rounded-lg px-3 py-2">
                                 <div>

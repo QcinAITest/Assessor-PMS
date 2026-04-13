@@ -997,7 +997,12 @@ function boardAdmin(boardCode) {
         async generateLink(formId) {
             const data = await api.post('/api/v1/boards/' + this.board.id + '/forms/' + formId + '/generate-link', {});
             const url = window.location.origin + data.url;
-            await navigator.clipboard.writeText(url);
+            try {
+                await navigator.clipboard.writeText(url);
+            } catch (_) {
+                // Clipboard API unavailable (non-HTTPS) — fall back to prompt
+                window.prompt('Copy this link:', url);
+            }
             this.copiedFormId = formId;
             setTimeout(() => { this.copiedFormId = null; }, 2500);
         },

@@ -313,9 +313,13 @@ function publicForm(token, previewMode, previewBoardCode, previewFormId) {
         async init() {
             try {
                 if (this.previewMode) {
-                    // Preview: load form directly from the board API (no token needed)
-                    const board = await fetch('/api/v1/boards/' + previewBoardCode).then(r => r.json());
-                    const ft = await fetch('/api/v1/boards/' + board.id + '/forms/' + previewFormId).then(r => r.json());
+                    // Preview: board API requires auth — send JWT from localStorage
+                    const tok = localStorage.getItem('qci_token');
+                    const authHeaders = tok ? { 'Authorization': 'Bearer ' + tok } : {};
+                    const board = await fetch('/api/v1/boards/' + previewBoardCode, { headers: authHeaders }).then(r => r.json());
+                    if (!board.id) { this.loading = false; return; }
+                    const ft = await fetch('/api/v1/boards/' + board.id + '/forms/' + previewFormId, { headers: authHeaders }).then(r => r.json());
+                    if (!ft.id) { this.loading = false; return; }
                     this.form = {
                         form_name: ft.name + ' (Preview)',
                         form_code: ft.code,

@@ -488,6 +488,16 @@ def seed_nabcb(db):
         add_competency_params(db, fid, competencies)
         add_essentials(db, fid)
 
+    # Frequency rules for NABCB
+    for role in ["ROLE_TL", "ROLE_ASSESSOR"]:
+        for code, _, _, _, _, _ in nabcb_forms:
+            ft = db.query(FormTemplate).filter(FormTemplate.code == code, FormTemplate.board_id == board_id).first()
+            if ft:
+                db.add(FrequencyRule(
+                    board_id=board_id, role_id=role, form_template_id=ft.id,
+                    trigger_type="EVERY_AUDIT", is_active=True
+                ))
+
     return board_id
 
 
@@ -581,6 +591,15 @@ def seed_nabet(db):
         ]),
     ])
     add_essentials(db, fid)
+
+    # Frequency rules for NABET
+    for role in ["ROLE_LEAD", "ROLE_ASSESSOR"]:
+        ft = db.query(FormTemplate).filter(FormTemplate.code == "F_CLIENT", FormTemplate.board_id == board_id).first()
+        if ft:
+            db.add(FrequencyRule(
+                board_id=board_id, role_id=role, form_template_id=ft.id,
+                trigger_type="EVERY_AUDIT", is_active=True
+            ))
 
     return board_id
 

@@ -116,8 +116,11 @@
     </div>
 
     <!-- Comparative Matrix -->
-    <div class="mt-8 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6" x-show="boardDetails.length > 0">
-        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Board Comparison Matrix</h2>
+    <div class="mt-8 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6" x-show="!matrixLoading || boardDetails.length > 0">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Board Comparison Matrix</h2>
+            <span x-show="matrixLoading" class="text-xs text-gray-400 dark:text-gray-500 animate-pulse">Loading…</span>
+        </div>
         <div class="overflow-x-auto">
             <table class="min-w-full text-sm">
                 <thead>
@@ -195,13 +198,17 @@ function dashboardApp() {
     return {
         boards: [],
         boardDetails: [],
+        matrixLoading: true,
         async init() {
             this.boards = await api.get('/api/v1/boards');
-            // Load full details for comparison matrix
-            for (const b of this.boards) {
-                const detail = await api.get('/api/v1/boards/' + b.id);
-                this.boardDetails.push(detail);
-            }
+            // Load all board details in parallel; skip any that fail (network/auth)
+            const results = await Promise.allSettled(
+                this.boards.map(b => api.get('/api/v1/boards/' + b.id))
+            );
+            this.boardDetails = results
+                .filter(r => r.status === 'fulfilled' && r.value && r.value.id)
+                .map(r => r.value);
+            this.matrixLoading = false;
         },
         boardColor(code) {
             const colors = {

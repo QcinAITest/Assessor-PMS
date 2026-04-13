@@ -28,9 +28,9 @@ def list_boards(
 ):
     """System admins see all boards; board admins see only their own board."""
     if current_user.role == "SYSTEM_ADMIN":
-        boards = db.query(Board).all()
+        boards = db.query(Board).order_by(Board.code).all()
     else:
-        boards = db.query(Board).filter(Board.id == current_user.board_id).all()
+        boards = db.query(Board).filter(Board.id == current_user.board_id).order_by(Board.code).all()
     return [_board_summary(b) for b in boards]
 
 
