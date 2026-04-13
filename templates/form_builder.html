@@ -304,7 +304,7 @@
                            @keydown.enter.prevent="addParam()"
                            type="text"
                            :placeholder="newParam.parent_id ? 'e.g. Knowledge of standards' : 'e.g. Technical Competence'"
-                           class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-300 focus:border-transparent outline-none">
+                           class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-qci-accent focus:border-transparent outline-none">
                 </div>
 
                 <!-- Response Type -->
@@ -381,7 +381,7 @@
                             <span class="text-gray-400 dark:text-gray-500 font-normal ml-1">(auto-generated from name, you can edit)</span>
                         </label>
                         <input x-model="newParam.code" type="text" placeholder="e.g. TECHNICAL_COMPETENCE"
-                               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm font-mono bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-300 focus:border-transparent outline-none">
+                               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm font-mono bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-qci-accent focus:border-transparent outline-none">
                     </div>
                 </div>
             </div>
@@ -428,7 +428,7 @@
                            @keydown.enter.prevent="addEssential()"
                            type="text"
                            placeholder="e.g. Maintains professional ethics and conduct"
-                           class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-300 focus:border-transparent outline-none">
+                           class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-qci-accent focus:border-transparent outline-none">
                     <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Phrase it so that "Yes" is always the desired answer.</p>
                 </div>
                 <div>
@@ -442,18 +442,21 @@
                     <div x-show="showEssentialAdvanced" class="mt-3">
                         <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Internal Code</label>
                         <input x-model="newEssential.code" type="text" placeholder="e.g. PROFESSIONAL_ETHICS"
-                               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm font-mono bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-300 focus:border-transparent outline-none">
+                               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm font-mono bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-qci-accent focus:border-transparent outline-none">
                     </div>
                 </div>
             </div>
-            <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-700 flex justify-end space-x-3">
-                <button @click="showAddEssential = false; showEssentialAdvanced = false"
-                        class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">Cancel</button>
-                <button @click="addEssential()"
-                        :disabled="!newEssential.label.trim()"
-                        class="px-5 py-2 bg-qci-accent text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
-                    Add Essential Criterion
-                </button>
+            <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-700">
+                <p x-show="essentialError" class="text-xs text-red-600 dark:text-red-400 mb-3" x-text="essentialError"></p>
+                <div class="flex justify-end space-x-3">
+                    <button @click="showAddEssential = false; showEssentialAdvanced = false; essentialError = ''"
+                            class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">Cancel</button>
+                    <button @click="addEssential()"
+                            :disabled="!newEssential.label.trim()"
+                            class="px-5 py-2 bg-qci-accent text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                        Add Essential Criterion
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -480,31 +483,34 @@
                        @keydown.enter.prevent="saveEditEssential()"
                        type="text"
                        placeholder="e.g. Maintains professional ethics and conduct"
-                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-qci-accent focus:border-transparent">
+                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-qci-accent focus:border-transparent outline-none">
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Code</label>
                 <input x-model="editEssential.code"
                        type="text"
                        placeholder="Auto-generated from label"
-                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-qci-accent focus:border-transparent font-mono">
+                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-qci-accent focus:border-transparent outline-none font-mono">
                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Unique identifier, auto-filled from label</p>
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Sort Order</label>
                 <input x-model.number="editEssential.sort_order"
                        type="number" min="0"
-                       class="w-24 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-qci-accent focus:border-transparent">
+                       class="w-24 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-qci-accent focus:border-transparent outline-none">
             </div>
         </div>
-        <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-700 flex justify-end space-x-3">
-            <button @click="showEditEssential = false"
-                    class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">Cancel</button>
-            <button @click="saveEditEssential()"
-                    :disabled="!editEssential.label || !editEssential.label.trim()"
-                    class="px-5 py-2 bg-qci-accent text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
-                Save Changes
-            </button>
+        <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-700">
+            <p x-show="editEssentialError" class="text-xs text-red-600 dark:text-red-400 mb-3" x-text="editEssentialError"></p>
+            <div class="flex justify-end space-x-3">
+                <button @click="showEditEssential = false; editEssentialError = ''"
+                        class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">Cancel</button>
+                <button @click="saveEditEssential()"
+                        :disabled="!editEssential.label || !editEssential.label.trim()"
+                        class="px-5 py-2 bg-qci-accent text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                    Save Changes
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -516,7 +522,7 @@ function formBuilder(boardCode, formId) {
     return {
         boardCode, boardId: '', form: {},
         showAddParam: false, showAddEssential: false,
-        showEditEssential: false, editEssentialId: null, editEssential: {},
+        showEditEssential: false, editEssentialId: null, editEssential: {}, editEssentialError: '',
         showAdvanced: false, showEssentialAdvanced: false,
         paramError: '', essentialError: '',
         newParam: { code: '', label: '', weight: 10, data_type: 'RATING_1_5', is_mandatory: true, parent_id: null, sort_order: 0 },
@@ -578,13 +584,21 @@ function formBuilder(boardCode, formId) {
         },
 
         async init() {
-            const board = await api.get('/api/v1/boards/' + boardCode);
-            this.boardId = board.id;
-            await this.reload();
+            try {
+                const board = await api.get('/api/v1/boards/' + boardCode);
+                this.boardId = board.id;
+                await this.reload();
+            } catch (e) {
+                console.error('Form builder init failed:', e);
+            }
         },
 
         async reload() {
-            this.form = await api.get('/api/v1/boards/' + this.boardId + '/forms/' + formId);
+            try {
+                this.form = await api.get('/api/v1/boards/' + this.boardId + '/forms/' + formId);
+            } catch (e) {
+                console.error('Reload failed:', e);
+            }
         },
 
         async addParam() {
@@ -606,19 +620,28 @@ function formBuilder(boardCode, formId) {
 
         async deleteParam(paramId) {
             if (!confirm('Delete this item and all its questions? This cannot be undone.')) return;
-            await api.del('/api/v1/boards/' + this.boardId + '/forms/' + formId + '/parameters/' + paramId);
-            await this.reload();
+            try {
+                await api.del('/api/v1/boards/' + this.boardId + '/forms/' + formId + '/parameters/' + paramId);
+                await this.reload();
+            } catch (e) {
+                alert('Failed to delete: ' + (e.message || 'Please try again.'));
+            }
         },
 
         async addEssential() {
             if (!this.newEssential.label.trim()) return;
             if (!this.newEssential.code) this.newEssential.code = this.toCode(this.newEssential.label);
             this.newEssential.sort_order = (this.form.essential_criteria || []).length;
-            await api.post('/api/v1/boards/' + this.boardId + '/forms/' + formId + '/essentials', this.newEssential);
-            this.showAddEssential = false;
-            this.showEssentialAdvanced = false;
-            this.newEssential = { code: '', label: '', sort_order: 0 };
-            await this.reload();
+            this.essentialError = '';
+            try {
+                await api.post('/api/v1/boards/' + this.boardId + '/forms/' + formId + '/essentials', this.newEssential);
+                this.showAddEssential = false;
+                this.showEssentialAdvanced = false;
+                this.newEssential = { code: '', label: '', sort_order: 0 };
+                await this.reload();
+            } catch (e) {
+                this.essentialError = e.message || 'Failed to add. Please try again.';
+            }
         },
 
         openEditEssential(ec) {
@@ -629,17 +652,26 @@ function formBuilder(boardCode, formId) {
 
         async saveEditEssential() {
             if (!this.editEssential.label.trim()) return;
-            await api.put('/api/v1/boards/' + this.boardId + '/forms/' + formId + '/essentials/' + this.editEssentialId, this.editEssential);
-            this.showEditEssential = false;
-            this.editEssentialId = null;
-            this.editEssential = {};
-            await this.reload();
+            this.editEssentialError = '';
+            try {
+                await api.put('/api/v1/boards/' + this.boardId + '/forms/' + formId + '/essentials/' + this.editEssentialId, this.editEssential);
+                this.showEditEssential = false;
+                this.editEssentialId = null;
+                this.editEssential = {};
+                await this.reload();
+            } catch (e) {
+                this.editEssentialError = e.message || 'Failed to save. Please try again.';
+            }
         },
 
         async deleteEssential(ecId) {
             if (!confirm('Delete this essential criterion? This cannot be undone.')) return;
-            await api.del('/api/v1/boards/' + this.boardId + '/forms/' + formId + '/essentials/' + ecId);
-            await this.reload();
+            try {
+                await api.del('/api/v1/boards/' + this.boardId + '/forms/' + formId + '/essentials/' + ecId);
+                await this.reload();
+            } catch (e) {
+                alert('Failed to delete: ' + (e.message || 'Please try again.'));
+            }
         },
     };
 }
