@@ -285,10 +285,15 @@
             <!-- Modal Header -->
             <div class="px-6 py-5 border-b border-gray-100 dark:border-gray-700">
                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white" x-text="newParam.parent_id ? 'Add a Question' : 'Add an Evaluation Area'"></h3>
-                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1"
-                   x-text="newParam.parent_id
-                       ? 'This question will appear under the selected area. Assessors will rate this directly.'
-                       : 'An evaluation area groups related questions together. You can set a weight to indicate its importance.'">
+                <!-- Sub-question: show parent context -->
+                <p x-show="newParam.parent_id && newParamParentLabel"
+                   class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    Under: <span class="font-medium text-gray-700 dark:text-gray-200" x-text="newParamParentLabel"></span>
+                </p>
+                <!-- Top-level: description -->
+                <p x-show="!newParam.parent_id"
+                   class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    Groups related questions together. Set a weight to indicate its importance.
                 </p>
             </div>
 
@@ -305,6 +310,12 @@
                            type="text"
                            :placeholder="newParam.parent_id ? 'e.g. Knowledge of standards' : 'e.g. Technical Competence'"
                            class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-qci-accent focus:border-transparent outline-none">
+                    <!-- Internal ID — always visible, de-emphasised -->
+                    <div class="mt-2">
+                        <label class="block text-xs text-gray-400 dark:text-gray-500 mb-1">Internal ID <span class="font-normal">(auto-generated, editable)</span></label>
+                        <input x-model="newParam.code" type="text" :placeholder="newParam.parent_id ? 'e.g. KNOWLEDGE_OF_STANDARDS' : 'e.g. TECHNICAL_COMPETENCE'"
+                               class="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-1.5 text-xs font-mono bg-gray-50 dark:bg-gray-700/60 text-gray-600 dark:text-gray-400 focus:ring-1 focus:ring-qci-accent focus:border-transparent outline-none">
+                    </div>
                 </div>
 
                 <!-- Response Type -->
@@ -327,7 +338,7 @@
                         <svg class="w-4 h-4 text-blue-500 dark:text-blue-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                         </svg>
-                        <span class="text-xs text-blue-700 dark:text-blue-400">Evaluation areas are automatically scored as the average of their questions.</span>
+                        <span class="text-xs text-blue-700 dark:text-blue-400">Evaluation areas are automatically scored as the weighted average of their questions.</span>
                     </div>
                 </div>
 
@@ -354,7 +365,7 @@
                 </div>
 
                 <!-- Required toggle — only for sub-questions -->
-                <div x-show="newParam.parent_id" class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <div x-show="newParam.parent_id" class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/60 rounded-lg border border-gray-100 dark:border-gray-700">
                     <div>
                         <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Required question</span>
                         <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Assessors must answer this before submitting</p>
@@ -365,24 +376,6 @@
                         <span :class="newParam.is_mandatory ? 'translate-x-6' : 'translate-x-1'"
                               class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform shadow"></span>
                     </button>
-                </div>
-
-                <!-- Advanced: Code field -->
-                <div>
-                    <button type="button" @click="showAdvanced = !showAdvanced"
-                            class="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 flex items-center space-x-1 transition">
-                        <svg class="w-3.5 h-3.5 transition-transform" :class="showAdvanced ? 'rotate-90' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                        </svg>
-                        <span>Advanced settings</span>
-                    </button>
-                    <div x-show="showAdvanced" class="mt-3">
-                        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Internal Code
-                            <span class="text-gray-400 dark:text-gray-500 font-normal ml-1">(auto-generated from name, you can edit)</span>
-                        </label>
-                        <input x-model="newParam.code" type="text" placeholder="e.g. TECHNICAL_COMPETENCE"
-                               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm font-mono bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-qci-accent focus:border-transparent outline-none">
-                    </div>
                 </div>
             </div>
 
@@ -395,12 +388,17 @@
             </div>
 
             <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-700 flex justify-end space-x-3">
-                <button @click="showAddParam = false; showAdvanced = false"
-                        class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">Cancel</button>
+                <button @click="showAddParam = false; paramError = ''"
+                        :disabled="saving"
+                        class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-50">Cancel</button>
                 <button @click="addParam()"
-                        :disabled="!newParam.label.trim()"
-                        class="px-5 py-2 bg-qci-accent text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
-                    <span x-text="newParam.parent_id ? 'Add Question' : 'Add Area'"></span>
+                        :disabled="!newParam.label.trim() || saving"
+                        class="inline-flex items-center space-x-2 px-5 py-2 bg-qci-accent text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <svg x-show="saving" class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                    </svg>
+                    <span x-text="saving ? 'Saving…' : (newParam.parent_id ? 'Add Question' : 'Add Area')"></span>
                 </button>
             </div>
         </div>
@@ -415,7 +413,7 @@
          x-transition:leave-start="opacity-100"
          x-transition:leave-end="opacity-0"
          class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" @click.self="showAddEssential = false">
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md">
             <div class="px-6 py-5 border-b border-gray-100 dark:border-gray-700">
                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Add Essential Criterion</h3>
                 <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">A yes/no gate — if answered "No", the assessor is flagged regardless of score.</p>
@@ -428,33 +426,31 @@
                            @keydown.enter.prevent="addEssential()"
                            type="text"
                            placeholder="e.g. Maintains professional ethics and conduct"
+                           autofocus
                            class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-qci-accent focus:border-transparent outline-none">
                     <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Phrase it so that "Yes" is always the desired answer.</p>
                 </div>
+                <!-- Internal ID — always visible, de-emphasised -->
                 <div>
-                    <button type="button" @click="showEssentialAdvanced = !showEssentialAdvanced"
-                            class="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 flex items-center space-x-1 transition">
-                        <svg class="w-3.5 h-3.5 transition-transform" :class="showEssentialAdvanced ? 'rotate-90' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                        </svg>
-                        <span>Advanced settings</span>
-                    </button>
-                    <div x-show="showEssentialAdvanced" class="mt-3">
-                        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Internal Code</label>
-                        <input x-model="newEssential.code" type="text" placeholder="e.g. PROFESSIONAL_ETHICS"
-                               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm font-mono bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-qci-accent focus:border-transparent outline-none">
-                    </div>
+                    <label class="block text-xs text-gray-400 dark:text-gray-500 mb-1">Internal ID <span class="font-normal">(auto-generated, editable)</span></label>
+                    <input x-model="newEssential.code" type="text" placeholder="e.g. PROFESSIONAL_ETHICS"
+                           class="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-1.5 text-xs font-mono bg-gray-50 dark:bg-gray-700/60 text-gray-600 dark:text-gray-400 focus:ring-1 focus:ring-qci-accent focus:border-transparent outline-none">
                 </div>
             </div>
             <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-700">
                 <p x-show="essentialError" class="text-xs text-red-600 dark:text-red-400 mb-3" x-text="essentialError"></p>
                 <div class="flex justify-end space-x-3">
-                    <button @click="showAddEssential = false; showEssentialAdvanced = false; essentialError = ''"
-                            class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">Cancel</button>
+                    <button @click="showAddEssential = false; essentialError = ''"
+                            :disabled="saving"
+                            class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-50">Cancel</button>
                     <button @click="addEssential()"
-                            :disabled="!newEssential.label.trim()"
-                            class="px-5 py-2 bg-qci-accent text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
-                        Add Essential Criterion
+                            :disabled="!newEssential.label.trim() || saving"
+                            class="inline-flex items-center space-x-2 px-5 py-2 bg-qci-accent text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <svg x-show="saving" class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                        </svg>
+                        <span x-text="saving ? 'Saving…' : 'Add Criterion'"></span>
                     </button>
                 </div>
             </div>
@@ -474,41 +470,42 @@
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md">
         <div class="px-6 py-5 border-b border-gray-100 dark:border-gray-700">
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Edit Essential Criterion</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">A yes/no gate — if answered "No", the assessor is flagged regardless of score.</p>
         </div>
         <div class="px-6 py-5 space-y-4">
             <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Label <span class="text-red-500">*</span></label>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Criterion Statement <span class="text-red-500">*</span></label>
                 <input x-model="editEssential.label"
                        @input="editEssential.code = toCode(editEssential.label)"
                        @keydown.enter.prevent="saveEditEssential()"
                        type="text"
                        placeholder="e.g. Maintains professional ethics and conduct"
-                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-qci-accent focus:border-transparent outline-none">
+                       class="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-qci-accent focus:border-transparent outline-none">
+                <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Phrase it so that "Yes" is always the desired answer.</p>
             </div>
+            <!-- Internal ID — always visible, de-emphasised -->
             <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Code</label>
+                <label class="block text-xs text-gray-400 dark:text-gray-500 mb-1">Internal ID <span class="font-normal">(auto-generated, editable)</span></label>
                 <input x-model="editEssential.code"
                        type="text"
                        placeholder="Auto-generated from label"
-                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-qci-accent focus:border-transparent outline-none font-mono">
-                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Unique identifier, auto-filled from label</p>
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Sort Order</label>
-                <input x-model.number="editEssential.sort_order"
-                       type="number" min="0"
-                       class="w-24 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-qci-accent focus:border-transparent outline-none">
+                       class="w-full px-3 py-1.5 border border-gray-200 dark:border-gray-600 rounded-lg text-xs font-mono bg-gray-50 dark:bg-gray-700/60 text-gray-600 dark:text-gray-400 focus:ring-1 focus:ring-qci-accent focus:border-transparent outline-none">
             </div>
         </div>
         <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-700">
             <p x-show="editEssentialError" class="text-xs text-red-600 dark:text-red-400 mb-3" x-text="editEssentialError"></p>
             <div class="flex justify-end space-x-3">
                 <button @click="showEditEssential = false; editEssentialError = ''"
-                        class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">Cancel</button>
+                        :disabled="saving"
+                        class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-50">Cancel</button>
                 <button @click="saveEditEssential()"
-                        :disabled="!editEssential.label || !editEssential.label.trim()"
-                        class="px-5 py-2 bg-qci-accent text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
-                    Save Changes
+                        :disabled="!editEssential.label || !editEssential.label.trim() || saving"
+                        class="inline-flex items-center space-x-2 px-5 py-2 bg-qci-accent text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <svg x-show="saving" class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                    </svg>
+                    <span x-text="saving ? 'Saving…' : 'Save Changes'"></span>
                 </button>
             </div>
         </div>
@@ -520,13 +517,13 @@
 <script>
 function formBuilder(boardCode, formId) {
     return {
-        boardCode, boardId: '', form: {},
+        boardCode, boardId: '',
+        form: { name: '', parameters: [], essential_criteria: [], stakeholder_weight: 0, is_mandatory: false },
         showAddParam: false, showAddEssential: false,
         showEditEssential: false, editEssentialId: null, editEssential: {}, editEssentialError: '',
-        showAdvanced: false, showEssentialAdvanced: false,
-        paramError: '', essentialError: '',
+        paramError: '', essentialError: '', saving: false, newParamParentLabel: '',
         newParam: { code: '', label: '', weight: 10, data_type: 'RATING_1_5', is_mandatory: true, parent_id: null, sort_order: 0 },
-        newEssential: { code: '', label: '', sort_order: 0 },
+        newEssential: { code: '', label: '' },
 
         paramColors:  ['bg-blue-500', 'bg-emerald-500', 'bg-orange-500', 'bg-purple-500', 'bg-pink-500', 'bg-teal-500', 'bg-indigo-500', 'bg-rose-500'],
         borderColors: ['border-l-blue-500', 'border-l-emerald-500', 'border-l-orange-500', 'border-l-purple-500', 'border-l-pink-500', 'border-l-teal-500', 'border-l-indigo-500', 'border-l-rose-500'],
@@ -578,7 +575,9 @@ function formBuilder(boardCode, formId) {
                 parent_id: parentId,
                 sort_order: 0,
             };
-            this.showAdvanced = false;
+            this.newParamParentLabel = parentId
+                ? (this.topParams.find(p => p.id === parentId)?.label || 'Selected Area')
+                : '';
             this.paramError = '';
             this.showAddParam = true;
         },
@@ -586,6 +585,7 @@ function formBuilder(boardCode, formId) {
         async init() {
             try {
                 const board = await api.get('/api/v1/boards/' + boardCode);
+                if (!board?.id) return;
                 this.boardId = board.id;
                 await this.reload();
             } catch (e) {
@@ -595,64 +595,72 @@ function formBuilder(boardCode, formId) {
 
         async reload() {
             try {
-                this.form = await api.get('/api/v1/boards/' + this.boardId + '/forms/' + formId);
+                const result = await api.get('/api/v1/boards/' + this.boardId + '/forms/' + formId);
+                if (result?.id) this.form = result;
             } catch (e) {
                 console.error('Reload failed:', e);
             }
         },
 
         async addParam() {
-            if (!this.newParam.label.trim()) return;
+            if (!this.newParam.label.trim() || this.saving) return;
             this.paramError = '';
-            if (!this.newParam.parent_id) {
-                this.newParam.data_type = 'CALCULATED';
-            }
+            if (!this.newParam.parent_id) this.newParam.data_type = 'CALCULATED';
             this.newParam.sort_order = this.topParams.length;
+            this.saving = true;
             try {
                 await api.post('/api/v1/boards/' + this.boardId + '/forms/' + formId + '/parameters', this.newParam);
                 this.showAddParam = false;
-                this.showAdvanced = false;
                 await this.reload();
             } catch (e) {
                 this.paramError = e.message || 'Failed to add. Please try again.';
+            } finally {
+                this.saving = false;
             }
         },
 
         async deleteParam(paramId) {
             if (!confirm('Delete this item and all its questions? This cannot be undone.')) return;
+            this.saving = true;
             try {
                 await api.del('/api/v1/boards/' + this.boardId + '/forms/' + formId + '/parameters/' + paramId);
                 await this.reload();
             } catch (e) {
                 alert('Failed to delete: ' + (e.message || 'Please try again.'));
+            } finally {
+                this.saving = false;
             }
         },
 
         async addEssential() {
-            if (!this.newEssential.label.trim()) return;
+            if (!this.newEssential.label.trim() || this.saving) return;
             if (!this.newEssential.code) this.newEssential.code = this.toCode(this.newEssential.label);
             this.newEssential.sort_order = (this.form.essential_criteria || []).length;
             this.essentialError = '';
+            this.saving = true;
             try {
                 await api.post('/api/v1/boards/' + this.boardId + '/forms/' + formId + '/essentials', this.newEssential);
                 this.showAddEssential = false;
-                this.showEssentialAdvanced = false;
-                this.newEssential = { code: '', label: '', sort_order: 0 };
+                this.newEssential = { code: '', label: '' };
                 await this.reload();
             } catch (e) {
                 this.essentialError = e.message || 'Failed to add. Please try again.';
+            } finally {
+                this.saving = false;
             }
         },
 
         openEditEssential(ec) {
             this.editEssentialId = ec.id;
             this.editEssential = { code: ec.code, label: ec.label, sort_order: ec.sort_order };
+            this.editEssentialError = '';
             this.showEditEssential = true;
         },
 
         async saveEditEssential() {
-            if (!this.editEssential.label.trim()) return;
+            if (!this.editEssential.label.trim() || this.saving) return;
             this.editEssentialError = '';
+            this.saving = true;
             try {
                 await api.put('/api/v1/boards/' + this.boardId + '/forms/' + formId + '/essentials/' + this.editEssentialId, this.editEssential);
                 this.showEditEssential = false;
@@ -661,16 +669,21 @@ function formBuilder(boardCode, formId) {
                 await this.reload();
             } catch (e) {
                 this.editEssentialError = e.message || 'Failed to save. Please try again.';
+            } finally {
+                this.saving = false;
             }
         },
 
         async deleteEssential(ecId) {
             if (!confirm('Delete this essential criterion? This cannot be undone.')) return;
+            this.saving = true;
             try {
                 await api.del('/api/v1/boards/' + this.boardId + '/forms/' + formId + '/essentials/' + ecId);
                 await this.reload();
             } catch (e) {
                 alert('Failed to delete: ' + (e.message || 'Please try again.'));
+            } finally {
+                this.saving = false;
             }
         },
     };
