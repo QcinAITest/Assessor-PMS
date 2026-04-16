@@ -201,7 +201,7 @@
                         <h2 class="text-base font-semibold text-gray-900 dark:text-white">Essential Criteria</h2>
                         <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Pass/fail gates — must answer "Yes"</p>
                     </div>
-                    <button @click="showAddEssential = true"
+                    <button @click="saving = false; essentialError = ''; newEssential = { code: '', label: '' }; showAddEssential = true"
                             class="text-qci-accent hover:text-blue-700 text-xs font-medium flex items-center space-x-1">
                         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                         <span>Add</span>
@@ -225,7 +225,7 @@
                                 <span class="text-xs font-medium text-red-800 dark:text-red-300 leading-relaxed" x-text="ec.label"></span>
                             </div>
                             <div class="flex items-center space-x-2 ml-3 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button @click="openEditEssential(ec)" class="text-qci-accent hover:text-blue-700 text-xs font-medium">Edit</button>
+                                <button @click="openEditEssential(ec.id, ec.code, ec.label, ec.sort_order)" class="text-qci-accent hover:text-blue-700 text-xs font-medium">Edit</button>
                                 <button @click="deleteEssential(ec.id)" class="text-red-500 hover:text-red-700 text-xs">✕</button>
                             </div>
                         </div>
@@ -567,6 +567,7 @@ function formBuilder(boardCode, formId) {
         },
 
         openAddParam(parentId) {
+            this.saving = false;
             this.newParam = {
                 code: '', label: '',
                 weight: Math.min(10, this.weightRemaining),
@@ -650,9 +651,10 @@ function formBuilder(boardCode, formId) {
             }
         },
 
-        openEditEssential(ec) {
-            this.editEssentialId = ec.id;
-            this.editEssential = { code: ec.code, label: ec.label, sort_order: ec.sort_order };
+        openEditEssential(id, code, label, sort_order) {
+            this.saving = false;
+            this.editEssentialId = id;
+            this.editEssential = { code: code || '', label: label || '', sort_order: sort_order || 0 };
             this.editEssentialError = '';
             this.showEditEssential = true;
         },
