@@ -1,25 +1,148 @@
 """
-Schema migration — run ONCE after the Fix-7 model changes.
-Adds missing created_at/updated_at columns and makes form_submissions
-nullable without dropping any existing data.
+Schema migration — run after each pull that changes the data model.
+Supports both SQLite (local dev) and PostgreSQL (production).
 """
-import sqlite3
 import os
 
-DB_PATH = os.getenv("DATABASE_URL", "qci_pms.db").replace("sqlite:///", "")
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./qci_pms.db")
+IS_POSTGRES = DATABASE_URL.startswith("postgresql") or DATABASE_URL.startswith("postgres")
+
 
 def migrate():
-    conn = sqlite3.connect(DB_PATH)
+    if IS_POSTGRES:
+        _migrate_postgres()
+    else:
+        _migrate_sqlite()
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _pg_columns(cur, table):
+    cur.execute(
+        "SELECT column_name FROM information_schema.columns WHERE table_name = %s",
+        (table,)
+    )
+    return {row[0] for row in cur.fetchall()}
+
+
+def _sqlite_columns(cur, table):
+    cur.execute(f"PRAGMA table_info({table})")
+    return {row[1] for row in cur.fetchall()}
+
+
+# ---------------------------------------------------------------------------
+# PostgreSQL migration
+# ---------------------------------------------------------------------------
+
+def _migrate_postgres():
+    import psycopg2
+
+    print(f"Connecting to PostgreSQL …")
+    conn = psycopg2.connect(DATABASE_URL)
+    conn.autocommit = False
+    cur = conn.cursor()
+
+    def columns(table):
+        return _pg_columns(cur, table)
+
+    NOW = "2024-01-01 00:00:00"
+
+    # --- board_roles ---
+    cols = columns("board_roles")
+    if "created_at" not in cols:
+        cur.execute("ALTER TABLE board_roles ADD COLUMN created_at TIMESTAMP")
+        cur.execute(f"UPDATE board_roles SET created_at = '{NOW}' WHERE created_at IS NULL")
+        print("board_roles.created_at added")
+    if "updated_at" not in cols:
+        cur.execute("ALTER TABLE board_roles ADD COLUMN updated_at TIMESTAMP")
+        cur.execute(f"UPDATE board_roles SET updated_at = '{NOW}' WHERE updated_at IS NULL")
+        print("board_roles.updated_at added")
+
+    # --- essential_criteria ---
+    cols = columns("essential_criteria")
+    if "created_at" not in cols:
+        cur.execute("ALTER TABLE essential_criteria ADD COLUMN created_at TIMESTAMP")
+        cur.execute(f"UPDATE essential_criteria SET created_at = '{NOW}' WHERE created_at IS NULL")
+        print("essential_criteria.created_at added")
+    if "updated_at" not in cols:
+        cur.execute("ALTER TABLE essential_criteria ADD COLUMN updated_at TIMESTAMP")
+        cur.execute(f"UPDATE essential_criteria SET updated_at = '{NOW}' WHERE updated_at IS NULL")
+        print("essential_criteria.updated_at added")
+
+    # --- frequency_rules ---
+    cols = columns("frequency_rules")
+    if "created_at" not in cols:
+        cur.execute("ALTER TABLE frequency_rules ADD COLUMN created_at TIMESTAMP")
+        cur.execute(f"UPDATE frequency_rules SET created_at = '{NOW}' WHERE created_at IS NULL")
+        print("frequency_rules.created_at added")
+    if "updated_at" not in cols:
+        cur.execute("ALTER TABLE frequency_rules ADD COLUMN updated_at TIMESTAMP")
+        cur.execute(f"UPDATE frequency_rules SET updated_at = '{NOW}' WHERE updated_at IS NULL")
+        print("frequency_rules.updated_at added")
+
+    # --- webhooks ---
+    cols = columns("webhooks")
+    if "updated_at" not in cols:
+        cur.execute("ALTER TABLE webhooks ADD COLUMN updated_at TIMESTAMP")
+        print("webhooks.updated_at added")
+
+    # --- assessors ---
+    cols = columns("assessors")
+    if "updated_at" not in cols:
+        cur.execute("ALTER TABLE assessors ADD COLUMN updated_at TIMESTAMP")
+        print("assessors.updated_at added")
+
+    # --- users: external_id ---
+    cols = columns("users")
+    if "external_id" not in cols:
+        cur.execute("ALTER TABLE users ADD COLUMN external_id VARCHAR(100)")
+        print("users.external_id added")
+
+    # --- form_submissions: make FK columns nullable ---
+    # In PostgreSQL we can ALTER COLUMN to drop NOT NULL safely.
+    nullable_cols = {
+        "assessment_id": "VARCHAR(36)",
+        "evaluator_id":  "VARCHAR(36)",
+        "evaluee_id":    "VARCHAR(36)",
+    }
+    for col, _ in nullable_cols.items():
+        cur.execute(f"""
+            SELECT is_nullable
+            FROM information_schema.columns
+            WHERE table_name = 'form_submissions' AND column_name = %s
+        """, (col,))
+        row = cur.fetchone()
+        if row and row[0] == "NO":
+            cur.execute(f"ALTER TABLE form_submissions ALTER COLUMN {col} DROP NOT NULL")
+            print(f"form_submissions.{col} made nullable")
+
+    conn.commit()
+    cur.close()
+    conn.close()
+    print("Migration complete (PostgreSQL).")
+
+
+# ---------------------------------------------------------------------------
+# SQLite migration
+# ---------------------------------------------------------------------------
+
+def _migrate_sqlite():
+    import sqlite3
+
+    db_path = DATABASE_URL.replace("sqlite:///./", "").replace("sqlite:///", "")
+    print(f"Connecting to SQLite: {db_path} …")
+    conn = sqlite3.connect(db_path)
     conn.execute("PRAGMA foreign_keys = OFF")
     cur = conn.cursor()
 
     def columns(table):
-        cur.execute(f"PRAGMA table_info({table})")
-        return {row[1] for row in cur.fetchall()}
+        return _sqlite_columns(cur, table)
 
-    NOW = "2024-01-01 00:00:00"  # sentinel for existing rows; future rows use Python datetime
+    NOW = "2024-01-01 00:00:00"
 
-    # --- board_roles: add created_at, updated_at ---
+    # --- board_roles ---
     cols = columns("board_roles")
     if "created_at" not in cols:
         cur.execute("ALTER TABLE board_roles ADD COLUMN created_at DATETIME")
@@ -30,7 +153,7 @@ def migrate():
         cur.execute(f"UPDATE board_roles SET updated_at = '{NOW}' WHERE updated_at IS NULL")
         print("board_roles.updated_at added")
 
-    # --- essential_criteria: add created_at, updated_at ---
+    # --- essential_criteria ---
     cols = columns("essential_criteria")
     if "created_at" not in cols:
         cur.execute("ALTER TABLE essential_criteria ADD COLUMN created_at DATETIME")
@@ -41,7 +164,7 @@ def migrate():
         cur.execute(f"UPDATE essential_criteria SET updated_at = '{NOW}' WHERE updated_at IS NULL")
         print("essential_criteria.updated_at added")
 
-    # --- frequency_rules: add created_at, updated_at ---
+    # --- frequency_rules ---
     cols = columns("frequency_rules")
     if "created_at" not in cols:
         cur.execute("ALTER TABLE frequency_rules ADD COLUMN created_at DATETIME")
@@ -52,26 +175,25 @@ def migrate():
         cur.execute(f"UPDATE frequency_rules SET updated_at = '{NOW}' WHERE updated_at IS NULL")
         print("frequency_rules.updated_at added")
 
-    # --- webhooks: add updated_at (created_at already exists) ---
+    # --- webhooks ---
     cols = columns("webhooks")
     if "updated_at" not in cols:
         cur.execute("ALTER TABLE webhooks ADD COLUMN updated_at DATETIME")
         print("webhooks.updated_at added")
 
-    # --- assessors: add updated_at (created_at already exists) ---
+    # --- assessors ---
     cols = columns("assessors")
     if "updated_at" not in cols:
         cur.execute("ALTER TABLE assessors ADD COLUMN updated_at DATETIME")
         print("assessors.updated_at added")
 
-    # --- users: add external_id for portal sync anchor ---
+    # --- users: external_id ---
     cols = columns("users")
     if "external_id" not in cols:
         cur.execute("ALTER TABLE users ADD COLUMN external_id VARCHAR(100)")
         print("users.external_id added")
 
-    # --- form_submissions: recreate to make assessment_id/evaluator_id/evaluee_id nullable ---
-    # Safe because there are no real submissions in a fresh dev DB.
+    # --- form_submissions: recreate to make FK columns nullable ---
     cur.execute("SELECT COUNT(*) FROM form_submissions")
     sub_count = cur.fetchone()[0]
     if sub_count == 0:
@@ -102,13 +224,12 @@ def migrate():
         """)
         print("form_submissions recreated with nullable FK columns")
     else:
-        print(f"Skipped form_submissions recreation — {sub_count} existing rows present. "
-              "Recreate manually if distribution links are needed.")
+        print(f"Skipped form_submissions recreation — {sub_count} existing rows present.")
 
     conn.commit()
     conn.execute("PRAGMA foreign_keys = ON")
     conn.close()
-    print("Migration complete.")
+    print("Migration complete (SQLite).")
 
 
 if __name__ == "__main__":
