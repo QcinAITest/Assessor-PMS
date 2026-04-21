@@ -1,6 +1,9 @@
 """
 Schema migration — run after each pull that changes the data model.
 Supports both SQLite (local dev) and PostgreSQL (production).
+
+Step 1: create_all() — creates any tables that don't exist yet (safe on existing DBs)
+Step 2: ALTER TABLE   — adds any columns added after initial table creation
 """
 import os
 
@@ -8,7 +11,18 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./qci_pms.db")
 IS_POSTGRES = DATABASE_URL.startswith("postgresql") or DATABASE_URL.startswith("postgres")
 
 
+def _create_all_tables():
+    """Use SQLAlchemy to create all tables defined in models (idempotent — skips existing)."""
+    from app.database import engine, Base
+    import app.models.auth   # noqa: F401 — registers User model
+    import app.models.board  # noqa: F401 — registers all board models
+    import app.models.program  # noqa: F401 — registers ServiceLine, Program
+    Base.metadata.create_all(bind=engine)
+    print("Tables created / verified via SQLAlchemy.")
+
+
 def migrate():
+    _create_all_tables()
     if IS_POSTGRES:
         _migrate_postgres()
     else:
