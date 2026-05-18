@@ -144,7 +144,7 @@ class AssessorSyncRequest(BaseModel):
 class UserSyncItem(BaseModel):
     email: str
     full_name: str
-    role: str = "BOARD_ADMIN"
+    role: str = "board_admin"
     board_code: Optional[str] = None
     external_id: Optional[str] = None
 

@@ -32,7 +32,7 @@ class UserCreate(BaseModel):
     email: str
     full_name: str
     password: str
-    role: str = "BOARD_ADMIN"
+    role: str = "board_admin"
     board_id: Optional[str] = None
 
 
@@ -66,7 +66,7 @@ async def get_current_user(
 
 
 async def require_system_admin(user: User = Depends(get_current_user)) -> User:
-    if user.role != "SYSTEM_ADMIN":
+    if user.role != "super_admin":
         raise HTTPException(status.HTTP_403_FORBIDDEN, "System admin access required")
     return user
 
@@ -77,7 +77,7 @@ async def require_board_access(
     db: Session = Depends(get_db),
 ) -> User:
     """Board admin can only access their own board; system admin can access any."""
-    if user.role == "SYSTEM_ADMIN":
+    if user.role == "super_admin":
         return user
     # Resolve code → ID
     board = db.query(Board).filter(
@@ -140,8 +140,8 @@ def create_user(
     if db.query(User).filter(User.email == data.email.lower()).first():
         raise HTTPException(409, f"User '{data.email}' already exists")
 
-    if data.role == "BOARD_ADMIN" and not data.board_id:
-        raise HTTPException(400, "board_id required for BOARD_ADMIN role")
+    if data.role == "board_admin" and not data.board_id:
+        raise HTTPException(400, "board_id required for board_admin role")
 
     user = User(
         id=str(uuid.uuid4()),

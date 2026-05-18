@@ -6,6 +6,7 @@ Step 1: create_all() — creates any tables that don't exist yet (safe on existi
 Step 2: ALTER TABLE   — adds any columns added after initial table creation
 """
 import os
+from datetime import datetime
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./qci_pms.db")
 IS_POSTGRES = DATABASE_URL.startswith("postgresql") or DATABASE_URL.startswith("postgres")
@@ -61,7 +62,7 @@ def _migrate_postgres():
     def columns(table):
         return _pg_columns(cur, table)
 
-    NOW = "2024-01-01 00:00:00"
+    NOW = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
 
     # --- board_roles ---
     cols = columns("board_roles")
@@ -154,7 +155,7 @@ def _migrate_sqlite():
     def columns(table):
         return _sqlite_columns(cur, table)
 
-    NOW = "2024-01-01 00:00:00"
+    NOW = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
 
     # --- board_roles ---
     cols = columns("board_roles")

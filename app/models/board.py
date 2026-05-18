@@ -4,6 +4,7 @@ from sqlalchemy import (
     Column, Integer, String, Float, Boolean, Text, DateTime, ForeignKey, JSON,
     UniqueConstraint, CheckConstraint, Enum as SAEnum
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -21,7 +22,8 @@ class Board(Base):
     description = Column(Text)
     logo_url = Column(String(500))
     is_active = Column(Boolean, default=True)
-    config = Column(JSON, nullable=False, doc="Master board profile JSON")
+    config = Column(JSONB, nullable=False, server_default="{}",
+                    doc="Master board profile JSON — server_default ensures cross-app INSERT safety")
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -81,7 +83,7 @@ class FormTemplate(Base):
     description = Column(Text)
     stakeholder_weight = Column(Float, nullable=False, doc="Decimal, e.g. 0.30 = 30%")
     target_evaluator_role = Column(String(50), doc="Which role fills this form")
-    target_evaluee_roles = Column(JSON, doc="List of roles this form evaluates")
+    target_evaluee_roles = Column(JSONB, doc="List of roles this form evaluates")
     is_mandatory = Column(Boolean, default=True)
     is_active = Column(Boolean, default=True)
     version = Column(Integer, default=1)
@@ -113,7 +115,7 @@ class Parameter(Base):
     weight = Column(Float, nullable=False, default=0, doc="Weight within parent group, 0-100")
     data_type = Column(String(30), nullable=False, default="RATING_1_5",
                        doc="RATING_1_5 | YES_NO | PERCENTAGE | TEXT | DROPDOWN | CALCULATED")
-    options = Column(JSON, doc="For DROPDOWN: list of options. For RATING: scale config.")
+    options = Column(JSONB, doc="For DROPDOWN: list of options. For RATING: scale config.")
     is_mandatory = Column(Boolean, default=True)
     sort_order = Column(Integer, default=0)
 
@@ -220,7 +222,7 @@ class FormSubmission(Base):
     evaluee_id = Column(String(36), ForeignKey("assessors.id"), nullable=True)
     status = Column(String(30), default="CREATED",
                     doc="CREATED | SENT | PENDING | SUBMITTED | COMPLETED | FLAGGED")
-    responses = Column(JSON, nullable=False, default=dict,
+    responses = Column(JSONB, nullable=False, default=dict,
                        doc="{ parameter_code: value, essential_code: 'YES'|'NO' }")
     form_score = Column(Float, nullable=True, doc="Calculated after submission")
     essential_flag = Column(Boolean, default=False, doc="True if any essential='NO'")
@@ -245,7 +247,7 @@ class AuditScore(Base):
     assessment_id = Column(String(36), ForeignKey("assessments.id", ondelete="CASCADE"), nullable=False)
     evaluee_id = Column(String(36), ForeignKey("assessors.id"), nullable=False)
     board_id = Column(String(36), ForeignKey("boards.id"), nullable=False)
-    form_scores = Column(JSON, doc="{ form_code: { score, weight } }")
+    form_scores = Column(JSONB, doc="{ form_code: { score, weight } }")
     final_score = Column(Float, nullable=False)
     base_100_score = Column(Float, nullable=True, doc="Normalized 0-100 score for cross-board comparison")
     star_rating = Column(Integer)
@@ -265,7 +267,7 @@ class CumulativeRating(Base):
     evaluee_id = Column(String(36), ForeignKey("assessors.id"), nullable=False)
     board_id = Column(String(36), ForeignKey("boards.id"), nullable=False)
     window_size = Column(Integer, doc="Number of audits averaged (e.g. 5 or 10)")
-    audit_scores_used = Column(JSON, doc="List of audit_score IDs included")
+    audit_scores_used = Column(JSONB, doc="List of audit_score IDs included")
     cumulative_score = Column(Float, nullable=False)
     star_rating = Column(Integer)
     has_essential_flags = Column(Boolean, default=False)
@@ -304,11 +306,11 @@ class PortalAdapter(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     board_id = Column(String(36), ForeignKey("boards.id", ondelete="CASCADE"), nullable=False)
     portal_id = Column(String(100), nullable=False, doc="External portal identifier string")
-    role_map = Column(JSON, nullable=False, default=dict,
+    role_map = Column(JSONB, nullable=False, default=dict,
                       doc="{ external_role_id: internal_system_role_id }")
-    event_map = Column(JSON, nullable=False, default=dict,
+    event_map = Column(JSONB, nullable=False, default=dict,
                        doc="{ external_event_type: internal_event_type }")
-    vocabulary_map = Column(JSON, default=dict,
+    vocabulary_map = Column(JSONB, default=dict,
                             doc="{ portal_term: pms_term } for display translation")
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -330,8 +332,8 @@ class AuditLog(Base):
     event_type = Column(String(50))
     portal_id = Column(String(100), nullable=True, doc="Source portal for INBOUND; target for OUTBOUND")
     assessment_id = Column(String(36), nullable=True)
-    raw_payload = Column(JSON, nullable=True)
-    translated_payload = Column(JSON, nullable=True)
+    raw_payload = Column(JSONB, nullable=True)
+    translated_payload = Column(JSONB, nullable=True)
     status = Column(String(20), default="received",
                     doc="received | processed | failed | dispatched")
     error = Column(Text, nullable=True)

@@ -668,7 +668,7 @@ def seed_users(db, board_ids: dict):
         email="admin@qci.org.in",
         full_name="QCI System Administrator",
         password_hash=hash_password("Admin@123"),
-        role="SYSTEM_ADMIN",
+        role="super_admin",
         board_id=None,
     ))
     admin_accounts = [
@@ -683,7 +683,7 @@ def seed_users(db, board_ids: dict):
             email=email,
             full_name=name,
             password_hash=hash_password("BoardAdmin@123"),
-            role="BOARD_ADMIN",
+            role="board_admin",
             board_id=board_ids[code],
         ))
 

@@ -54,7 +54,7 @@ def _get_board(db: Session, board_id: str) -> Board:
 
 
 def _check_board_access(user: User, board: Board):
-    if user.role == "SYSTEM_ADMIN":
+    if user.role == "super_admin":
         return
     if user.board_id != board.id:
         raise HTTPException(403, "Access denied for this board")
