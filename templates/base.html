@@ -32,7 +32,6 @@
                         qci: {
                             navy:    '#071B2F',
                             navymid: '#0D2F52',
-                            gold:    '#B8901C',
                             blue:    '#1A6BBF',
                             bg:      '#F4F6F9',
                             surface: '#FFFFFF',
@@ -51,7 +50,7 @@
     </script>
     <style>
         [x-cloak] { display: none !important; }
-        .star-filled { color: #B8901C; }
+        .star-filled { color: #1A6BBF; }
         .star-empty  { color: #d1d5db; }
         .dark .star-empty { color: #4B5563; }
         body { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
@@ -80,9 +79,7 @@
                 <!-- Logo + nav links -->
                 <div class="flex items-center space-x-6 min-w-0">
                     <a href="/" class="flex items-center space-x-2.5 flex-shrink-0">
-                        <div class="w-7 h-7 rounded flex items-center justify-center flex-shrink-0" style="background: #B8901C;">
-                            <span class="text-white font-bold text-sm leading-none">Q</span>
-                        </div>
+                        <img src="/static/images/qci-logo.webp" alt="QCI" class="h-9 w-auto flex-shrink-0 rounded">
                         <div class="hidden sm:flex flex-col leading-none">
                             <span class="text-white font-semibold text-sm tracking-wide">QCI</span>
                             <span class="text-[#5B6B82] text-xs">Performance Management</span>
@@ -118,7 +115,7 @@
                         </div>
                         <div id="nav-user-avatar"
                              class="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
-                             style="background: #B8901C; outline: 2px solid #B8901C; outline-offset: 1px;">
+                             style="background: #1A6BBF; outline: 2px solid #1A6BBF; outline-offset: 1px;">
                         </div>
                     </div>
                     <button onclick="logout()"

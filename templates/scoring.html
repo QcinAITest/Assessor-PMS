@@ -177,8 +177,8 @@
                                                             <button @click="submission.responses[sub.code] = n"
                                                                     class="w-8 h-8 rounded-full border-2 text-xs font-bold transition-all"
                                                                     :class="submission.responses[sub.code] >= n
-                                                                        ? 'bg-[#B8901C] border-[#B8901C] text-white'
-                                                                        : 'border-[#DDE3EC] dark:border-[#1A3352] text-[#5B6B82] hover:border-[#B8901C] hover:text-[#B8901C]'"
+                                                                        ? 'bg-[#1A6BBF] border-[#1A6BBF] text-white'
+                                                                        : 'border-[#DDE3EC] dark:border-[#1A3352] text-[#5B6B82] hover:border-[#1A6BBF] hover:text-[#1A6BBF]'"
                                                                     x-text="n">
                                                             </button>
                                                         </template>
@@ -409,7 +409,7 @@
                         </div>
                     </div>
                     <button @click="fireTrigger()"
-                            class="w-full px-4 py-2.5 bg-[#B8901C] text-white text-sm font-semibold rounded-lg hover:bg-[#9A7716] transition">
+                            class="w-full px-4 py-2.5 bg-[#1A6BBF] text-white text-sm font-semibold rounded-lg hover:bg-[#1558A3] transition">
                         Fire Trigger
                     </button>
                     <div x-show="triggerResult" class="bg-[#F4F6F9] dark:bg-[#071B2F] rounded-lg p-3 border border-[#DDE3EC] dark:border-[#1A3352]">
