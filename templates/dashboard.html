@@ -1,78 +1,118 @@
 {% extends "base.html" %}
-{% block title %}Dashboard - QCI PMS{% endblock %}
+{% block title %}Dashboard – QCI PMS{% endblock %}
 
 {% block content %}
 <div x-data="dashboardApp()" x-init="init()">
-    <!-- Header -->
+
+    <!-- Page header -->
     <div class="mb-8">
-        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Board Administration</h1>
-        <p class="mt-2 text-gray-600 dark:text-gray-400">Configure and manage performance evaluation across all QCI accreditation boards</p>
+        <p class="text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-1">Quality Council of India</p>
+        <h1 class="text-3xl font-bold text-[#0A1628] dark:text-white">Board Administration</h1>
+        <p class="mt-1.5 text-[#5B6B82] text-sm">Configure and manage performance evaluation across all QCI accreditation boards.</p>
+    </div>
+
+    <!-- Hero stats strip (shown once boards load) -->
+    <div x-show="boards.length > 0"
+         class="bg-[#071B2F] rounded-xl px-6 py-5 mb-8 flex flex-wrap gap-6 items-center">
+        <div class="flex items-center space-x-3">
+            <div class="w-8 h-8 rounded flex items-center justify-center" style="background: #B8901C;">
+                <span class="text-white font-bold text-sm">Q</span>
+            </div>
+            <span class="text-white font-semibold text-sm hidden sm:block">QCI PMS</span>
+        </div>
+        <div class="h-4 w-px bg-[#0D2F52] hidden sm:block"></div>
+        <div class="text-center">
+            <div class="text-2xl font-bold text-white" x-text="boards.length"></div>
+            <div class="text-xs text-[#5B6B82] mt-0.5">Boards</div>
+        </div>
+        <div class="h-4 w-px bg-[#0D2F52] hidden sm:block"></div>
+        <div class="text-center">
+            <div class="text-2xl font-bold text-white" x-text="boards.reduce((s,b) => s + b.forms_count, 0)"></div>
+            <div class="text-xs text-[#5B6B82] mt-0.5">Form Templates</div>
+        </div>
+        <div class="h-4 w-px bg-[#0D2F52] hidden sm:block"></div>
+        <div class="text-center">
+            <div class="text-2xl font-bold text-white" x-text="boards.reduce((s,b) => s + b.roles_count, 0)"></div>
+            <div class="text-xs text-[#5B6B82] mt-0.5">Role Mappings</div>
+        </div>
+        <div class="ml-auto hidden sm:block">
+            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-900/40 text-green-400 border border-green-800">
+                <span class="w-1.5 h-1.5 bg-green-400 rounded-full mr-1.5"></span>
+                API Operational
+            </span>
+        </div>
     </div>
 
     <!-- Board Cards -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
         <template x-for="board in boards" :key="board.id">
             <a :href="'/board/' + board.code"
-               class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md hover:border-qci-accent transition-all p-6 block">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-sm"
-                         :class="boardColor(board.code)">
-                        <span x-text="board.code"></span>
+               class="bg-white dark:bg-[#0F2337] rounded-xl border border-[#DDE3EC] dark:border-[#1A3352] shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 block overflow-hidden group">
+                <!-- Top color bar -->
+                <div class="h-1" :class="boardColor(board.code)"></div>
+                <div class="p-5">
+                    <div class="flex items-start justify-between mb-4">
+                        <div>
+                            <div class="text-3xl font-bold text-[#0A1628] dark:text-white leading-none" x-text="board.code"></div>
+                            <div class="text-xs text-[#5B6B82] mt-1 leading-snug" x-text="board.name"></div>
+                        </div>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0"
+                              :class="board.is_active
+                                  ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400'
+                                  : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400'">
+                            <span class="w-1 h-1 rounded-full mr-1"
+                                  :class="board.is_active ? 'bg-green-500' : 'bg-red-500'"></span>
+                            <span x-text="board.is_active ? 'Active' : 'Inactive'"></span>
+                        </span>
                     </div>
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                          :class="board.is_active ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'">
-                        <span x-text="board.is_active ? 'Active' : 'Inactive'"></span>
-                    </span>
-                </div>
-                <h3 class="font-semibold text-gray-900 dark:text-white text-sm" x-text="board.code"></h3>
-                <div class="mt-3 grid grid-cols-2 gap-2 text-xs text-gray-500 dark:text-gray-400">
-                    <div class="flex items-center">
-                        <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                        </svg>
-                        <span x-text="board.forms_count + ' Forms'"></span>
-                    </div>
-                    <div class="flex items-center">
-                        <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
-                        </svg>
-                        <span x-text="board.roles_count + ' Roles'"></span>
-                    </div>
-                    <div class="flex items-center col-span-2">
-                        <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                  d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
-                        </svg>
-                        <span x-text="board.rating_engine === 'percentage' ? 'Percentage Rating' : 'Numeric Rating'"></span>
+                    <!-- Stats row -->
+                    <div class="border-t border-[#EEF2F7] dark:border-[#1A3352] pt-3 grid grid-cols-3 gap-2 text-center">
+                        <div>
+                            <div class="text-sm font-bold text-[#0A1628] dark:text-white" x-text="board.forms_count"></div>
+                            <div class="text-xs text-[#5B6B82]">Forms</div>
+                        </div>
+                        <div>
+                            <div class="text-sm font-bold text-[#0A1628] dark:text-white" x-text="board.roles_count"></div>
+                            <div class="text-xs text-[#5B6B82]">Roles</div>
+                        </div>
+                        <div>
+                            <div class="text-xs font-semibold mt-1"
+                                 :class="board.rating_engine === 'percentage'
+                                     ? 'text-violet-600 dark:text-violet-400'
+                                     : 'text-[#1A6BBF] dark:text-blue-400'"
+                                 x-text="board.rating_engine === 'percentage' ? '%' : '1–5'">
+                            </div>
+                            <div class="text-xs text-[#5B6B82]">Engine</div>
+                        </div>
                     </div>
                 </div>
             </a>
         </template>
     </div>
 
-    <!-- Quick Stats -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- System Overview + Integration Endpoints -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <!-- System Overview -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-            <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">System Architecture</h2>
-            <div class="space-y-3 text-sm">
-                <div class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
-                    <span class="text-gray-600 dark:text-gray-400">Boards Configured</span>
-                    <span class="font-semibold text-gray-900 dark:text-white" x-text="boards.length"></span>
+        <div class="bg-white dark:bg-[#0F2337] rounded-xl border border-[#DDE3EC] dark:border-[#1A3352] shadow-sm overflow-hidden">
+            <div class="px-6 py-4 bg-[#F8FAFC] dark:bg-[#0A1628] border-b border-[#DDE3EC] dark:border-[#1A3352]">
+                <h2 class="text-sm font-semibold text-[#0A1628] dark:text-white">System Architecture</h2>
+            </div>
+            <div class="p-6 space-y-0">
+                <div class="flex items-center justify-between py-3 border-b border-[#EEF2F7] dark:border-[#1A3352]">
+                    <span class="text-sm text-[#5B6B82]">Boards Configured</span>
+                    <span class="text-sm font-semibold text-[#0A1628] dark:text-white" x-text="boards.length"></span>
                 </div>
-                <div class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
-                    <span class="text-gray-600 dark:text-gray-400">Total Form Templates</span>
-                    <span class="font-semibold text-gray-900 dark:text-white" x-text="boards.reduce((s,b) => s + b.forms_count, 0)"></span>
+                <div class="flex items-center justify-between py-3 border-b border-[#EEF2F7] dark:border-[#1A3352]">
+                    <span class="text-sm text-[#5B6B82]">Total Form Templates</span>
+                    <span class="text-sm font-semibold text-[#0A1628] dark:text-white" x-text="boards.reduce((s,b) => s + b.forms_count, 0)"></span>
                 </div>
-                <div class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
-                    <span class="text-gray-600 dark:text-gray-400">Total Role Mappings</span>
-                    <span class="font-semibold text-gray-900 dark:text-white" x-text="boards.reduce((s,b) => s + b.roles_count, 0)"></span>
+                <div class="flex items-center justify-between py-3 border-b border-[#EEF2F7] dark:border-[#1A3352]">
+                    <span class="text-sm text-[#5B6B82]">Total Role Mappings</span>
+                    <span class="text-sm font-semibold text-[#0A1628] dark:text-white" x-text="boards.reduce((s,b) => s + b.roles_count, 0)"></span>
                 </div>
-                <div class="flex items-center justify-between py-2">
-                    <span class="text-gray-600 dark:text-gray-400">API Status</span>
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
+                <div class="flex items-center justify-between py-3">
+                    <span class="text-sm text-[#5B6B82]">API Status</span>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400">
                         Operational
                     </span>
                 </div>
@@ -80,109 +120,114 @@
         </div>
 
         <!-- Integration Endpoints -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-            <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Integration Endpoints</h2>
-            <div class="space-y-3">
-                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+        <div class="bg-white dark:bg-[#0F2337] rounded-xl border border-[#DDE3EC] dark:border-[#1A3352] shadow-sm overflow-hidden">
+            <div class="px-6 py-4 bg-[#F8FAFC] dark:bg-[#0A1628] border-b border-[#DDE3EC] dark:border-[#1A3352]">
+                <h2 class="text-sm font-semibold text-[#0A1628] dark:text-white">Integration Endpoints</h2>
+            </div>
+            <div class="p-4 space-y-2">
+                <div class="bg-[#F8FAFC] dark:bg-[#0A1628] rounded-lg p-3">
                     <div class="flex items-center space-x-2 mb-1">
-                        <span class="px-2 py-0.5 bg-green-500 text-white text-xs font-mono rounded">POST</span>
-                        <code class="text-sm text-gray-700 dark:text-gray-300">/api/v1/triggers/assessment-complete</code>
+                        <span class="px-2 py-0.5 bg-green-600 text-white text-xs font-mono rounded font-medium">POST</span>
+                        <code class="text-xs text-[#0A1628] dark:text-[#A8C4E0]">/api/v1/triggers/assessment-complete</code>
                     </div>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 ml-14">Trigger from external assessment portals after onsite/surveillance completion</p>
+                    <p class="text-xs text-[#5B6B82] ml-0">Trigger from external assessment portals after onsite/surveillance completion</p>
                 </div>
-                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                <div class="bg-[#F8FAFC] dark:bg-[#0A1628] rounded-lg p-3">
                     <div class="flex items-center space-x-2 mb-1">
-                        <span class="px-2 py-0.5 bg-blue-500 text-white text-xs font-mono rounded">POST</span>
-                        <code class="text-sm text-gray-700 dark:text-gray-300">/api/v1/assessments/{id}/submissions</code>
+                        <span class="px-2 py-0.5 bg-[#1A6BBF] text-white text-xs font-mono rounded font-medium">POST</span>
+                        <code class="text-xs text-[#0A1628] dark:text-[#A8C4E0]">/api/v1/assessments/{id}/submissions</code>
                     </div>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 ml-14">Submit completed feedback forms with auto-scoring</p>
+                    <p class="text-xs text-[#5B6B82]">Submit completed feedback forms with auto-scoring</p>
                 </div>
-                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                <div class="bg-[#F8FAFC] dark:bg-[#0A1628] rounded-lg p-3">
                     <div class="flex items-center space-x-2 mb-1">
-                        <span class="px-2 py-0.5 bg-purple-500 text-white text-xs font-mono rounded">POST</span>
-                        <code class="text-sm text-gray-700 dark:text-gray-300">/api/v1/assessments/{id}/calculate-score</code>
+                        <span class="px-2 py-0.5 bg-violet-600 text-white text-xs font-mono rounded font-medium">POST</span>
+                        <code class="text-xs text-[#0A1628] dark:text-[#A8C4E0]">/api/v1/assessments/{id}/calculate-score</code>
                     </div>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 ml-14">Calculate weighted final audit score and star rating</p>
+                    <p class="text-xs text-[#5B6B82]">Calculate weighted final audit score and star rating</p>
                 </div>
-                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                <div class="bg-[#F8FAFC] dark:bg-[#0A1628] rounded-lg p-3">
                     <div class="flex items-center space-x-2 mb-1">
-                        <span class="px-2 py-0.5 bg-yellow-500 text-white text-xs font-mono rounded">GET</span>
-                        <code class="text-sm text-gray-700 dark:text-gray-300">/api/v1/assessors/{id}/cumulative-rating</code>
+                        <span class="px-2 py-0.5 bg-amber-500 text-white text-xs font-mono rounded font-medium">GET</span>
+                        <code class="text-xs text-[#0A1628] dark:text-[#A8C4E0]">/api/v1/assessors/{id}/cumulative-rating</code>
                     </div>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 ml-14">Rolling cumulative rating across last N audits</p>
+                    <p class="text-xs text-[#5B6B82]">Rolling cumulative rating across last N audits</p>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Comparative Matrix -->
-    <div class="mt-8 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6" x-show="!matrixLoading || boardDetails.length > 0">
-        <div class="flex items-center justify-between mb-4">
-            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Board Comparison Matrix</h2>
-            <span x-show="matrixLoading" class="text-xs text-gray-400 dark:text-gray-500 animate-pulse">Loading…</span>
+    <!-- Board Comparison Matrix -->
+    <div class="bg-white dark:bg-[#0F2337] rounded-xl border border-[#DDE3EC] dark:border-[#1A3352] shadow-sm overflow-hidden"
+         x-show="!matrixLoading || boardDetails.length > 0">
+        <div class="px-6 py-4 bg-[#F8FAFC] dark:bg-[#0A1628] border-b border-[#DDE3EC] dark:border-[#1A3352] flex items-center justify-between">
+            <h2 class="text-sm font-semibold text-[#0A1628] dark:text-white">Board Comparison Matrix</h2>
+            <span x-show="matrixLoading" class="text-xs text-[#5B6B82] animate-pulse">Loading…</span>
         </div>
         <div class="overflow-x-auto">
             <table class="min-w-full text-sm">
                 <thead>
-                    <tr class="bg-gray-50 dark:bg-gray-700">
-                        <th class="px-4 py-3 text-left font-medium text-gray-600 dark:text-gray-300">Feature</th>
+                    <tr class="bg-[#F8FAFC] dark:bg-[#0A1628]">
+                        <th class="px-5 py-3 text-left text-xs font-semibold text-[#5B6B82] uppercase tracking-wider sticky left-0 bg-[#F8FAFC] dark:bg-[#0A1628] z-10 min-w-[160px]">Feature</th>
                         <template x-for="bd in boardDetails" :key="bd.code">
-                            <th class="px-4 py-3 text-center font-medium text-gray-600 dark:text-gray-300" x-text="bd.code"></th>
+                            <th class="px-5 py-3 text-center text-xs font-semibold text-[#0A1628] dark:text-white uppercase tracking-wider" x-text="bd.code"></th>
                         </template>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                    <tr>
-                        <td class="px-4 py-3 text-gray-700 dark:text-gray-300 font-medium">Rating Engine</td>
+                <tbody>
+                    <tr class="border-b border-[#EEF2F7] dark:border-[#1A3352] hover:bg-[#F8FAFC] dark:hover:bg-[#0A1628]">
+                        <td class="px-5 py-3 text-sm font-medium text-[#0A1628] dark:text-white sticky left-0 bg-white dark:bg-[#0F2337]">Rating Engine</td>
                         <template x-for="bd in boardDetails" :key="bd.code + '_re'">
-                            <td class="px-4 py-3 text-center">
-                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
-                                      :class="bd.config.rating_engine === 'percentage' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300' : 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'"
+                            <td class="px-5 py-3 text-center">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+                                      :class="bd.config.rating_engine === 'percentage'
+                                          ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300'
+                                          : 'bg-blue-100 text-[#1A6BBF] dark:bg-blue-900/40 dark:text-blue-300'"
                                       x-text="bd.config.rating_engine === 'percentage' ? 'Percentage' : 'Numeric (1-5)'">
                                 </span>
                             </td>
                         </template>
                     </tr>
-                    <tr>
-                        <td class="px-4 py-3 text-gray-700 dark:text-gray-300 font-medium">Cumulative Window</td>
+                    <tr class="border-b border-[#EEF2F7] dark:border-[#1A3352] hover:bg-[#F8FAFC] dark:hover:bg-[#0A1628]">
+                        <td class="px-5 py-3 text-sm font-medium text-[#0A1628] dark:text-white sticky left-0 bg-white dark:bg-[#0F2337]">Cumulative Window</td>
                         <template x-for="bd in boardDetails" :key="bd.code + '_cw'">
-                            <td class="px-4 py-3 text-center text-gray-600 dark:text-gray-400" x-text="bd.config.cumulative_window + ' audits'"></td>
+                            <td class="px-5 py-3 text-center text-sm text-[#5B6B82]" x-text="bd.config.cumulative_window + ' audits'"></td>
                         </template>
                     </tr>
-                    <tr>
-                        <td class="px-4 py-3 text-gray-700 dark:text-gray-300 font-medium">Stakeholder Weights</td>
+                    <tr class="border-b border-[#EEF2F7] dark:border-[#1A3352] hover:bg-[#F8FAFC] dark:hover:bg-[#0A1628]">
+                        <td class="px-5 py-3 text-sm font-medium text-[#0A1628] dark:text-white sticky left-0 bg-white dark:bg-[#0F2337]">Stakeholder Weights</td>
                         <template x-for="bd in boardDetails" :key="bd.code + '_sw'">
-                            <td class="px-4 py-3 text-center">
+                            <td class="px-5 py-3 text-center">
                                 <div class="space-y-1">
                                     <template x-for="(w, role) in bd.config.stakeholder_weights" :key="role">
                                         <div class="text-xs">
-                                            <span class="text-gray-500 dark:text-gray-400" x-text="role.replace(/_/g,' ')"></span>:
-                                            <span class="font-medium dark:text-gray-300" x-text="(w*100)+'%'"></span>
+                                            <span class="text-[#5B6B82]" x-text="role.replace(/_/g,' ')"></span>:
+                                            <span class="font-semibold text-[#0A1628] dark:text-white" x-text="(w*100)+'%'"></span>
                                         </div>
                                     </template>
                                 </div>
                             </td>
                         </template>
                     </tr>
-                    <tr>
-                        <td class="px-4 py-3 text-gray-700 dark:text-gray-300 font-medium">Terminology</td>
+                    <tr class="border-b border-[#EEF2F7] dark:border-[#1A3352] hover:bg-[#F8FAFC] dark:hover:bg-[#0A1628]">
+                        <td class="px-5 py-3 text-sm font-medium text-[#0A1628] dark:text-white sticky left-0 bg-white dark:bg-[#0F2337]">Terminology</td>
                         <template x-for="bd in boardDetails" :key="bd.code + '_t'">
-                            <td class="px-4 py-3 text-center text-xs text-gray-500 dark:text-gray-400">
+                            <td class="px-5 py-3 text-center text-xs text-[#5B6B82]">
                                 <div x-text="'Evaluator: ' + (bd.config.terminology?.evaluator || '-')"></div>
                                 <div x-text="'Org: ' + (bd.config.terminology?.organization || '-')"></div>
                             </td>
                         </template>
                     </tr>
-                    <tr>
-                        <td class="px-4 py-3 text-gray-700 dark:text-gray-300 font-medium">Forms</td>
+                    <tr class="border-b border-[#EEF2F7] dark:border-[#1A3352] hover:bg-[#F8FAFC] dark:hover:bg-[#0A1628]">
+                        <td class="px-5 py-3 text-sm font-medium text-[#0A1628] dark:text-white sticky left-0 bg-white dark:bg-[#0F2337]">Forms</td>
                         <template x-for="bd in boardDetails" :key="bd.code + '_f'">
-                            <td class="px-4 py-3 text-center text-gray-600 dark:text-gray-400" x-text="bd.form_templates?.length || 0"></td>
+                            <td class="px-5 py-3 text-center text-sm font-semibold text-[#0A1628] dark:text-white" x-text="bd.form_templates?.length || 0"></td>
                         </template>
                     </tr>
-                    <tr>
-                        <td class="px-4 py-3 text-gray-700 dark:text-gray-300 font-medium">Roles</td>
+                    <tr class="hover:bg-[#F8FAFC] dark:hover:bg-[#0A1628]">
+                        <td class="px-5 py-3 text-sm font-medium text-[#0A1628] dark:text-white sticky left-0 bg-white dark:bg-[#0F2337]">Roles</td>
                         <template x-for="bd in boardDetails" :key="bd.code + '_r'">
-                            <td class="px-4 py-3 text-center text-gray-600 dark:text-gray-400" x-text="bd.roles?.length || 0"></td>
+                            <td class="px-5 py-3 text-center text-sm font-semibold text-[#0A1628] dark:text-white" x-text="bd.roles?.length || 0"></td>
                         </template>
                     </tr>
                 </tbody>
@@ -212,8 +257,8 @@ function dashboardApp() {
         },
         boardColor(code) {
             const colors = {
-                NABL: 'bg-blue-600', NABH: 'bg-emerald-600',
-                NABCB: 'bg-orange-600', NABET: 'bg-purple-600'
+                NABL: 'bg-blue-700', NABH: 'bg-emerald-700',
+                NABCB: 'bg-orange-600', NABET: 'bg-violet-700'
             };
             return colors[code] || 'bg-gray-600';
         }

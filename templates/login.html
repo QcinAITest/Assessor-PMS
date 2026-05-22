@@ -14,64 +14,143 @@
             }
         })();
     </script>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
-            theme: { extend: { colors: { qci: { blue: '#1a3a5c', gold: '#c5961a', accent: '#2563eb' } } } }
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                    },
+                    colors: {
+                        qci: {
+                            navy:    '#071B2F',
+                            navymid: '#0D2F52',
+                            gold:    '#B8901C',
+                            blue:    '#1A6BBF',
+                        }
+                    }
+                }
+            }
         }
     </script>
-    <style>[x-cloak]{display:none!important}</style>
+    <style>
+        [x-cloak]{display:none!important}
+        body { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
+        /* Subtle diagonal line pattern for left panel */
+        .qci-pattern {
+            background-image: repeating-linear-gradient(
+                135deg,
+                transparent,
+                transparent 30px,
+                rgba(184,144,28,0.04) 30px,
+                rgba(184,144,28,0.04) 31px
+            );
+        }
+    </style>
 </head>
-<body class="h-full bg-gradient-to-br from-qci-blue to-blue-900 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center min-h-screen transition-colors duration-200">
+<body class="h-full bg-[#F4F6F9] dark:bg-[#080F1A] transition-colors duration-200">
 
-<!-- Dark mode toggle (floating) -->
+<!-- Subtle dark mode toggle in top-right corner -->
 <button onclick="toggleDark()" id="dark-toggle"
-        class="fixed top-4 right-4 z-50 w-9 h-9 flex items-center justify-center rounded-lg bg-white bg-opacity-15 hover:bg-opacity-25 text-white transition"
+        class="fixed top-4 right-4 z-50 w-8 h-8 flex items-center justify-center rounded text-[#5B6B82] dark:text-[#5B6B82] hover:text-[#071B2F] dark:hover:text-white hover:bg-white dark:hover:bg-[#0D2F52] transition"
         title="Toggle dark mode">
-    <svg id="icon-moon" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <svg id="icon-moon" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
     </svg>
-    <svg id="icon-sun" class="w-5 h-5 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <svg id="icon-sun" class="w-4 h-4 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
     </svg>
 </button>
 
-<div x-data="loginApp()" x-cloak class="w-full max-w-md px-4">
-    <!-- Card -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden">
-        <!-- Header -->
-        <div class="bg-qci-blue px-8 py-8 text-center">
-            <div class="w-16 h-16 bg-qci-gold rounded-xl flex items-center justify-center mx-auto mb-4">
-                <span class="text-white font-bold text-2xl">Q</span>
+<div class="min-h-screen flex">
+
+    <!-- Left panel: QCI Branding -->
+    <div class="hidden lg:flex lg:w-5/12 xl:w-1/2 bg-[#071B2F] qci-pattern flex-col justify-between p-12">
+        <!-- Top: Logo -->
+        <div class="flex items-center space-x-3">
+            <div class="w-8 h-8 rounded flex items-center justify-center flex-shrink-0" style="background: #B8901C;">
+                <span class="text-white font-bold text-sm">Q</span>
             </div>
-            <h1 class="text-white font-bold text-xl">QCI Performance Management</h1>
-            <p class="text-blue-300 text-sm mt-1">Sign in to your account</p>
+            <div>
+                <span class="text-white font-semibold text-sm tracking-wide">QCI</span>
+            </div>
         </div>
 
-        <!-- Form -->
-        <div class="px-8 py-8">
+        <!-- Center: Big wordmark + tagline -->
+        <div>
+            <div class="mb-8">
+                <span class="text-[#B8901C] font-bold" style="font-size: 7rem; line-height: 1; letter-spacing: -0.04em;">Q</span>
+            </div>
+            <h1 class="text-white font-bold text-3xl leading-tight mb-4">
+                Performance<br>Management<br>System
+            </h1>
+            <p class="text-[#5B6B82] text-base leading-relaxed max-w-xs">
+                Unified assessor performance evaluation across NABL, NABH, NABCB, and NABET accreditation boards.
+            </p>
+            <div class="mt-8 flex items-center space-x-3">
+                <div class="flex -space-x-1">
+                    <div class="w-6 h-6 rounded-full bg-blue-700 border border-[#071B2F] flex items-center justify-center text-white text-xs font-bold">N</div>
+                    <div class="w-6 h-6 rounded-full bg-emerald-700 border border-[#071B2F] flex items-center justify-center text-white text-xs font-bold">H</div>
+                    <div class="w-6 h-6 rounded-full bg-orange-600 border border-[#071B2F] flex items-center justify-center text-white text-xs font-bold">C</div>
+                    <div class="w-6 h-6 rounded-full bg-violet-700 border border-[#071B2F] flex items-center justify-center text-white text-xs font-bold">T</div>
+                </div>
+                <span class="text-[#5B6B82] text-xs">4 accreditation boards</span>
+            </div>
+        </div>
+
+        <!-- Bottom: Footer -->
+        <div>
+            <p class="text-[#3A5070] text-xs">Quality Council of India &copy; 2025</p>
+        </div>
+    </div>
+
+    <!-- Right panel: Login form -->
+    <div x-data="loginApp()" x-cloak
+         class="flex-1 flex flex-col items-center justify-center px-6 py-12 bg-white dark:bg-[#0A1628]">
+
+        <!-- Mobile logo (shown only on small screens) -->
+        <div class="lg:hidden mb-8 text-center">
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3" style="background: #071B2F;">
+                <span class="text-[#B8901C] font-bold text-xl">Q</span>
+            </div>
+            <h1 class="text-[#0A1628] dark:text-white font-bold text-lg">QCI Performance Management</h1>
+        </div>
+
+        <div class="w-full max-w-sm">
+            <!-- Heading -->
+            <div class="mb-8">
+                <h2 class="text-[#0A1628] dark:text-white font-bold text-2xl mb-1">Sign in</h2>
+                <p class="text-[#5B6B82] text-sm">Enter your credentials to access the portal.</p>
+            </div>
+
+            <!-- Form fields -->
             <div class="space-y-5">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Email address</label>
+                    <label class="block text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-2">Email address</label>
                     <input x-model="email" type="email" autocomplete="email"
                            @keyup.enter="login()"
                            placeholder="you@qci.org.in"
-                           class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-qci-accent focus:border-transparent outline-none transition">
+                           class="w-full border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-4 py-2.5 text-sm bg-white dark:bg-[#0F2337] text-[#0A1628] dark:text-white placeholder-[#5B6B82] focus:ring-2 focus:ring-[#1A6BBF] focus:border-transparent outline-none transition">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Password</label>
+                    <label class="block text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-2">Password</label>
                     <input x-model="password" type="password" autocomplete="current-password"
                            @keyup.enter="login()"
                            placeholder="••••••••"
-                           class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-qci-accent focus:border-transparent outline-none transition">
+                           class="w-full border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-4 py-2.5 text-sm bg-white dark:bg-[#0F2337] text-[#0A1628] dark:text-white placeholder-[#5B6B82] focus:ring-2 focus:ring-[#1A6BBF] focus:border-transparent outline-none transition">
                 </div>
 
                 <!-- Error -->
-                <div x-show="error" class="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg px-4 py-3 flex items-center space-x-2">
+                <div x-show="error" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-4 py-3 flex items-center space-x-2">
                     <svg class="w-4 h-4 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
                     </svg>
@@ -79,7 +158,7 @@
                 </div>
 
                 <button @click="login()" :disabled="loading"
-                        class="w-full bg-qci-accent text-white font-semibold py-2.5 rounded-lg hover:bg-blue-700 transition disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center space-x-2">
+                        class="w-full bg-[#071B2F] text-white font-semibold py-2.5 rounded-lg hover:bg-[#0D2F52] transition disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center space-x-2 text-sm">
                     <svg x-show="loading" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
@@ -88,39 +167,44 @@
                 </button>
             </div>
 
-            <p class="text-center text-xs text-gray-400 dark:text-gray-500 mt-6">
-                Quality Council of India · Unified Performance Management System
+            <p class="text-center text-xs text-[#5B6B82] mt-8">
+                Quality Council of India · Unified Performance Management
             </p>
         </div>
-    </div>
 
-    <!-- Dev credentials quick-fill -->
-    <div class="mt-5 bg-white bg-opacity-10 dark:bg-gray-800 dark:bg-opacity-60 rounded-xl p-4 border border-white border-opacity-20 dark:border-gray-700">
-        <p class="text-xs text-blue-200 dark:text-gray-400 font-semibold mb-3 uppercase tracking-wide">Dev / Testing Credentials</p>
-        <div class="space-y-2">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-medium text-white">System Admin</p>
-                    <p class="text-xs text-blue-300 dark:text-gray-400">admin@qci.org.in</p>
+        <!-- Dev credentials panel -->
+        <div class="w-full max-w-sm mt-8">
+            <div class="border border-[#DDE3EC] dark:border-[#1A3352] rounded-xl overflow-hidden">
+                <div class="bg-[#F8FAFC] dark:bg-[#0F2337] px-4 py-3 border-b border-[#DDE3EC] dark:border-[#1A3352]">
+                    <p class="text-xs font-semibold text-[#5B6B82] uppercase tracking-wider">Dev / Testing Credentials</p>
                 </div>
-                <button @click="fill('admin@qci.org.in', 'Admin@123')"
-                        class="text-xs bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-3 py-1.5 rounded-lg transition font-medium">
-                    Fill
-                </button>
-            </div>
-            <div class="border-t border-white border-opacity-10 dark:border-gray-700"></div>
-            <template x-for="cred in boardCreds" :key="cred.email">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-xs font-medium text-white" x-text="cred.label"></p>
-                        <p class="text-xs text-blue-300 dark:text-gray-400" x-text="cred.email"></p>
+                <div class="divide-y divide-[#DDE3EC] dark:divide-[#1A3352]">
+                    <!-- System Admin row -->
+                    <div class="flex items-center justify-between px-4 py-2.5">
+                        <div>
+                            <p class="text-xs font-medium text-[#0A1628] dark:text-white">System Admin</p>
+                            <p class="text-xs text-[#5B6B82]">admin@qci.org.in</p>
+                        </div>
+                        <button @click="fill('admin@qci.org.in', 'Admin@123')"
+                                class="text-xs border border-[#DDE3EC] dark:border-[#1A3352] text-[#5B6B82] hover:text-[#0A1628] dark:hover:text-white hover:border-[#0A1628] dark:hover:border-white px-3 py-1 rounded-lg transition font-medium">
+                            Fill
+                        </button>
                     </div>
-                    <button @click="fill(cred.email, 'BoardAdmin@123')"
-                            class="text-xs bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-3 py-1.5 rounded-lg transition font-medium">
-                        Fill
-                    </button>
+                    <!-- Board admin rows -->
+                    <template x-for="cred in boardCreds" :key="cred.email">
+                        <div class="flex items-center justify-between px-4 py-2.5">
+                            <div>
+                                <p class="text-xs font-medium text-[#0A1628] dark:text-white" x-text="cred.label"></p>
+                                <p class="text-xs text-[#5B6B82]" x-text="cred.email"></p>
+                            </div>
+                            <button @click="fill(cred.email, 'BoardAdmin@123')"
+                                    class="text-xs border border-[#DDE3EC] dark:border-[#1A3352] text-[#5B6B82] hover:text-[#0A1628] dark:hover:text-white hover:border-[#0A1628] dark:hover:border-white px-3 py-1 rounded-lg transition font-medium">
+                                Fill
+                            </button>
+                        </div>
+                    </template>
                 </div>
-            </template>
+            </div>
         </div>
     </div>
 </div>

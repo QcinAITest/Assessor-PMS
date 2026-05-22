@@ -14,6 +14,10 @@
             }
         })();
     </script>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script>
@@ -21,8 +25,25 @@
             darkMode: 'class',
             theme: {
                 extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                    },
                     colors: {
-                        qci: { blue: '#1a3a5c', gold: '#c5961a', light: '#f0f4f8', accent: '#2563eb' }
+                        qci: {
+                            navy:    '#071B2F',
+                            navymid: '#0D2F52',
+                            gold:    '#B8901C',
+                            blue:    '#1A6BBF',
+                            bg:      '#F4F6F9',
+                            surface: '#FFFFFF',
+                            border:  '#DDE3EC',
+                            textprimary: '#0A1628',
+                            textmuted:   '#5B6B82',
+                            // dark variants
+                            darkbg:      '#0A1628',
+                            darksurface: '#0F2337',
+                            darkborder:  '#1A3352',
+                        }
                     }
                 }
             }
@@ -30,12 +51,13 @@
     </script>
     <style>
         [x-cloak] { display: none !important; }
-        .star-filled { color: #c5961a; }
+        .star-filled { color: #B8901C; }
         .star-empty  { color: #d1d5db; }
-        .dark .star-empty { color: #6b7280; }
+        .dark .star-empty { color: #4B5563; }
+        body { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
     </style>
 </head>
-<body class="h-full bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+<body class="h-full bg-[#F4F6F9] dark:bg-[#080F1A] transition-colors duration-200">
 
 <!-- Auth guard: redirect to /login if no token -->
 <script>
@@ -52,56 +74,55 @@
 
 <div class="min-h-full">
     <!-- Navigation -->
-    <nav class="bg-qci-blue shadow-lg">
+    <nav class="bg-[#071B2F] border-b border-[#0D2F52] fixed top-0 left-0 right-0 z-40">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16">
+            <div class="flex justify-between h-14">
                 <!-- Logo + nav links -->
-                <div class="flex items-center space-x-4 min-w-0">
-                    <a href="/" class="flex items-center space-x-3 flex-shrink-0">
-                        <div class="w-10 h-10 bg-qci-gold rounded-lg flex items-center justify-center flex-shrink-0">
-                            <span class="text-white font-bold text-lg">Q</span>
+                <div class="flex items-center space-x-6 min-w-0">
+                    <a href="/" class="flex items-center space-x-2.5 flex-shrink-0">
+                        <div class="w-7 h-7 rounded flex items-center justify-center flex-shrink-0" style="background: #B8901C;">
+                            <span class="text-white font-bold text-sm leading-none">Q</span>
                         </div>
-                        <div class="hidden sm:block">
-                            <span class="text-white font-semibold text-lg">QCI</span>
-                            <span class="text-gray-300 text-sm ml-1">Performance Management</span>
+                        <div class="hidden sm:flex flex-col leading-none">
+                            <span class="text-white font-semibold text-sm tracking-wide">QCI</span>
+                            <span class="text-[#5B6B82] text-xs">Performance Management</span>
                         </div>
                     </a>
                     <a id="nav-sysadmin" href="/sysadmin"
-                       class="hidden text-gray-300 hover:text-white text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-white hover:bg-opacity-10 transition whitespace-nowrap">
+                       class="hidden text-[#5B6B82] hover:text-white text-sm font-medium transition-colors whitespace-nowrap">
                         System Admin
                     </a>
                 </div>
 
                 <!-- Right side: dark mode toggle + user info + logout -->
-                <div class="flex items-center space-x-2 sm:space-x-4">
+                <div class="flex items-center space-x-1 sm:space-x-3">
                     <!-- Dark mode toggle -->
                     <button id="dark-toggle" onclick="toggleDark()"
-                            class="w-9 h-9 flex items-center justify-center rounded-lg text-gray-300 hover:text-white hover:bg-white hover:bg-opacity-10 transition flex-shrink-0"
+                            class="w-8 h-8 flex items-center justify-center rounded text-[#5B6B82] hover:text-white hover:bg-[#0D2F52] transition flex-shrink-0"
                             title="Toggle dark mode">
-                        <!-- Moon icon (shown in light mode) -->
-                        <svg id="icon-moon" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg id="icon-moon" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                   d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
                         </svg>
-                        <!-- Sun icon (shown in dark mode) -->
-                        <svg id="icon-sun" class="w-5 h-5 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg id="icon-sun" class="w-4 h-4 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                   d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
                         </svg>
                     </button>
 
-                    <!-- User info (hidden on very small screens, shown sm+) -->
-                    <div id="nav-user" class="hidden items-center space-x-3">
+                    <!-- User info -->
+                    <div id="nav-user" class="hidden items-center space-x-2.5">
                         <div class="text-right hidden sm:block">
-                            <p id="nav-user-name" class="text-white text-sm font-medium leading-tight"></p>
-                            <p id="nav-user-role" class="text-gray-300 text-xs leading-tight"></p>
+                            <p id="nav-user-name" class="text-white text-xs font-medium leading-tight"></p>
+                            <p id="nav-user-role" class="text-[#5B6B82] text-xs leading-tight"></p>
                         </div>
                         <div id="nav-user-avatar"
-                             class="w-8 h-8 rounded-full bg-qci-gold flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                             class="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                             style="background: #B8901C; outline: 2px solid #B8901C; outline-offset: 1px;">
                         </div>
                     </div>
                     <button onclick="logout()"
-                            class="text-gray-300 hover:text-white text-sm px-2 sm:px-3 py-1.5 rounded-lg hover:bg-white hover:bg-opacity-10 transition whitespace-nowrap">
+                            class="text-[#5B6B82] hover:text-white text-xs px-2 py-1.5 rounded hover:bg-[#0D2F52] transition whitespace-nowrap">
                         Sign out
                     </button>
                 </div>
@@ -109,8 +130,8 @@
         </div>
     </nav>
 
-    <!-- Main Content -->
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+    <!-- Main Content — offset for fixed navbar -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-20">
         {% block content %}{% endblock %}
     </main>
 </div>

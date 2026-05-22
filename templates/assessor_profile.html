@@ -5,101 +5,105 @@
 <div x-data="assessorProfileApp('{{ assessor_id }}', '{{ board_code }}')" x-init="init()" x-cloak>
 
     <!-- Breadcrumb -->
-    <nav class="mb-6 text-sm">
-        <a href="/" class="text-qci-accent hover:underline">Dashboard</a>
-        <span class="mx-2 text-gray-400 dark:text-gray-500">/</span>
-        <a :href="'/board/' + boardCode" class="text-qci-accent hover:underline" x-text="boardCode"></a>
-        <span class="mx-2 text-gray-400 dark:text-gray-500">/</span>
-        <span class="text-gray-700 dark:text-gray-300" x-text="assessor ? assessor.name : 'Assessor Profile'"></span>
+    <nav class="mb-6 flex items-center space-x-2 text-sm">
+        <a href="/" class="text-[#1A6BBF] hover:underline">Dashboard</a>
+        <span class="text-[#5B6B82]">/</span>
+        <a :href="'/board/' + boardCode" class="text-[#1A6BBF] hover:underline" x-text="boardCode"></a>
+        <span class="text-[#5B6B82]">/</span>
+        <span class="text-[#0A1628] dark:text-white font-medium" x-text="assessor ? assessor.name : 'Assessor Profile'"></span>
     </nav>
 
     <!-- Loading -->
-    <div x-show="loading" class="flex items-center justify-center py-20">
+    <div x-show="loading" class="flex items-center justify-center py-24">
         <div class="text-center">
-            <div class="inline-block w-8 h-8 border-4 border-qci-accent border-t-transparent rounded-full animate-spin mb-3"></div>
-            <p class="text-gray-500 dark:text-gray-400 text-sm">Loading performance data…</p>
+            <div class="inline-block w-8 h-8 border-4 border-[#1A6BBF] border-t-transparent rounded-full animate-spin mb-4"></div>
+            <p class="text-[#5B6B82] text-sm">Loading performance data…</p>
         </div>
     </div>
 
     <!-- Error state -->
-    <div x-show="!loading && error" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-6 text-center">
+    <div x-show="!loading && error" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-8 text-center">
         <p class="text-red-700 dark:text-red-300 font-medium" x-text="error"></p>
-        <a :href="'/board/' + boardCode" class="mt-3 inline-block text-sm text-qci-accent hover:underline">← Back to board</a>
+        <a :href="'/board/' + boardCode" class="mt-4 inline-block text-sm text-[#1A6BBF] hover:underline">← Back to board</a>
     </div>
 
     <!-- Main content -->
-    <div x-show="!loading && assessor" class="space-y-6">
+    <div x-show="!loading && assessor" class="space-y-5">
 
-        <!-- ── Header Card ─────────────────────────────────────────────── -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-            <div class="flex flex-wrap items-start justify-between gap-4">
-                <div class="flex items-center space-x-4">
-                    <!-- Avatar initials -->
-                    <div class="w-16 h-16 rounded-xl flex items-center justify-center text-white text-xl font-bold flex-shrink-0"
-                         :class="boardColor(boardCode)">
-                        <span x-text="(assessor?.name || '?')[0].toUpperCase()"></span>
-                    </div>
-                    <div>
-                        <h1 class="text-2xl font-bold text-gray-900 dark:text-white" x-text="assessor?.name"></h1>
-                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5"
-                           x-text="(assessor?.role_label || assessor?.role_id) + ' · ' + (assessor?.board_name || boardCode)"></p>
-                        <div class="flex flex-wrap items-center gap-2 mt-2">
-                            <span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 font-mono"
-                                  x-text="'EMP: ' + assessor?.employee_id"></span>
-                            <span x-show="assessor?.email"
-                                  class="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
-                                  x-text="assessor?.email"></span>
-                            <span class="text-xs px-2 py-0.5 rounded-full font-semibold"
-                                  :class="assessor?.is_active
-                                      ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
-                                      : 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300'"
-                                  x-text="assessor?.is_active ? 'Active' : 'Inactive'"></span>
+        <!-- ── Header Card ──────────────────────────────────────────────── -->
+        <div class="bg-white dark:bg-[#0F2337] rounded-xl border border-[#DDE3EC] dark:border-[#1A3352] shadow-sm overflow-hidden">
+            <!-- Colored top stripe -->
+            <div class="h-1.5 w-full" :class="boardColor(boardCode)"></div>
+            <div class="p-6">
+                <div class="flex flex-wrap items-start justify-between gap-6">
+                    <div class="flex items-center space-x-5">
+                        <!-- Avatar initials -->
+                        <div class="w-16 h-16 rounded-xl flex items-center justify-center text-white text-2xl font-bold flex-shrink-0"
+                             :class="boardColor(boardCode)">
+                            <span x-text="(assessor?.name || '?')[0].toUpperCase()"></span>
+                        </div>
+                        <div>
+                            <h1 class="text-2xl font-bold text-[#0A1628] dark:text-white leading-tight" x-text="assessor?.name"></h1>
+                            <p class="text-sm text-[#5B6B82] mt-0.5"
+                               x-text="(assessor?.role_label || assessor?.role_id) + ' · ' + (assessor?.board_name || boardCode)"></p>
+                            <div class="flex flex-wrap items-center gap-2 mt-2.5">
+                                <span class="text-xs px-2.5 py-1 rounded-full bg-[#F4F6F9] dark:bg-[#1A3352] text-[#5B6B82] dark:text-[#8BA0B8] font-mono border border-[#DDE3EC] dark:border-[#1A3352]"
+                                      x-text="'EMP: ' + assessor?.employee_id"></span>
+                                <span x-show="assessor?.email"
+                                      class="text-xs px-2.5 py-1 rounded-full bg-[#F4F6F9] dark:bg-[#1A3352] text-[#5B6B82] dark:text-[#8BA0B8] border border-[#DDE3EC] dark:border-[#1A3352]"
+                                      x-text="assessor?.email"></span>
+                                <span class="text-xs px-2.5 py-1 rounded-full font-semibold"
+                                      :class="assessor?.is_active
+                                          ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
+                                          : 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800'"
+                                      x-text="assessor?.is_active ? 'Active' : 'Inactive'"></span>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <!-- Audit count pill -->
-                <div class="text-center bg-qci-accent bg-opacity-10 dark:bg-blue-900/30 rounded-xl px-6 py-3 border border-blue-200 dark:border-blue-800">
-                    <div class="text-3xl font-bold text-qci-accent" x-text="assessor?.audit_count ?? '—'"></div>
-                    <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Total Audits</div>
+                    <!-- Audit count stat -->
+                    <div class="text-center bg-[#F4F6F9] dark:bg-[#071B2F] rounded-xl px-8 py-4 border border-[#DDE3EC] dark:border-[#1A3352]">
+                        <div class="text-3xl font-bold text-[#0A1628] dark:text-white" x-text="assessor?.audit_count ?? '—'"></div>
+                        <div class="text-xs text-[#5B6B82] mt-1 font-medium uppercase tracking-wide">Total Audits</div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- ── Summary Row: Cumulative Rating + Essential Flags ─────────── -->
+        <!-- ── Summary Row: Cumulative Rating + Latest Score + Essential Flags ── -->
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <!-- Cumulative Score -->
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 text-center">
-                <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Cumulative Score</p>
-                <div class="text-4xl font-bold text-gray-900 dark:text-white"
+            <div class="bg-white dark:bg-[#0F2337] rounded-xl border border-[#DDE3EC] dark:border-[#1A3352] shadow-sm p-6 text-center">
+                <p class="text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-3">Cumulative Score</p>
+                <div class="text-4xl font-bold text-[#0A1628] dark:text-white"
                      x-text="cumulative ? cumulative.cumulative_score.toFixed(2) : '—'"></div>
-                <div class="mt-2" x-html="cumulative ? starHtml(cumulative.star_rating) : '—'"></div>
-                <p class="text-xs text-gray-400 dark:text-gray-500 mt-1"
+                <div class="mt-2.5 flex justify-center" x-html="cumulative ? starHtml(cumulative.star_rating) : '<span class=\'text-[#5B6B82] text-sm\'>No data yet</span>'"></div>
+                <p class="text-xs text-[#5B6B82] mt-2"
                    x-text="cumulative ? 'Over last ' + cumulative.window_size + ' audit(s)' : 'No data yet'"></p>
             </div>
 
             <!-- Latest Score -->
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 text-center">
-                <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Latest Score</p>
+            <div class="bg-white dark:bg-[#0F2337] rounded-xl border border-[#DDE3EC] dark:border-[#1A3352] shadow-sm p-6 text-center">
+                <p class="text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-3">Latest Score</p>
                 <div class="text-4xl font-bold"
-                     :class="latestScore ? scoreColor(latestScore.final_score) : 'text-gray-400 dark:text-gray-600'"
+                     :class="latestScore ? scoreColor(latestScore.final_score) : 'text-[#5B6B82]'"
                      x-text="latestScore ? latestScore.final_score.toFixed(2) : '—'"></div>
-                <div class="mt-2" x-html="latestScore ? starHtml(latestScore.star_rating) : '—'"></div>
-                <p class="text-xs text-gray-400 dark:text-gray-500 mt-1"
-                   x-text="latestScore ? latestScore.assessment_date || '' : 'No audits yet'"></p>
+                <div class="mt-2.5 flex justify-center" x-html="latestScore ? starHtml(latestScore.star_rating) : '<span class=\'text-[#5B6B82] text-sm\'>No audits yet</span>'"></div>
+                <p class="text-xs text-[#5B6B82] mt-2"
+                   x-text="latestScore ? (latestScore.assessment_date || '') : 'No audits yet'"></p>
             </div>
 
             <!-- Essential Flags -->
-            <div class="rounded-xl shadow-sm border p-5 text-center"
+            <div class="rounded-xl border shadow-sm p-6 text-center"
                  :class="cumulative?.has_essential_flags
                      ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
-                     : 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'">
-                <p class="text-xs font-medium uppercase tracking-wide mb-2"
-                   :class="cumulative?.has_essential_flags ? 'text-red-500 dark:text-red-400' : 'text-green-600 dark:text-green-400'">
+                     : 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800'">
+                <p class="text-xs font-semibold uppercase tracking-wider mb-3"
+                   :class="cumulative?.has_essential_flags ? 'text-red-500 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'">
                     Essential Criteria
                 </p>
-                <div class="text-4xl" x-text="cumulative?.has_essential_flags ? '⚠️' : '✅'"></div>
-                <p class="text-xs mt-2"
-                   :class="cumulative?.has_essential_flags ? 'text-red-700 dark:text-red-300' : 'text-green-700 dark:text-green-300'"
+                <div class="text-3xl" x-text="cumulative?.has_essential_flags ? '⚠️' : '✅'"></div>
+                <p class="text-xs mt-2.5 font-medium"
+                   :class="cumulative?.has_essential_flags ? 'text-red-700 dark:text-red-300' : 'text-emerald-700 dark:text-emerald-300'"
                    x-text="cumulative?.has_essential_flags
                        ? flagCount + ' flag(s) in window'
                        : 'All clear in window'">
@@ -107,13 +111,20 @@
             </div>
         </div>
 
-        <!-- ── Score Trend Chart ──────────────────────────────────────── -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-            <div class="flex items-center justify-between mb-4">
-                <h2 class="text-base font-semibold text-gray-900 dark:text-white">Score Trend</h2>
-                <span class="text-xs text-gray-400 dark:text-gray-500" x-text="scoreHistory.length + ' audit(s) shown'"></span>
+        <!-- ── Score Trend Chart ───────────────────────────────────────── -->
+        <div class="bg-white dark:bg-[#0F2337] rounded-xl border border-[#DDE3EC] dark:border-[#1A3352] shadow-sm p-6">
+            <div class="flex items-center justify-between mb-5">
+                <div>
+                    <h2 class="text-base font-semibold text-[#0A1628] dark:text-white">Score Trend</h2>
+                    <p class="text-xs text-[#5B6B82] mt-0.5">Audit score history over time</p>
+                </div>
+                <span class="text-xs text-[#5B6B82] bg-[#F4F6F9] dark:bg-[#071B2F] px-3 py-1.5 rounded-full border border-[#DDE3EC] dark:border-[#1A3352]"
+                      x-text="scoreHistory.length + ' audit(s) shown'"></span>
             </div>
-            <div x-show="scoreHistory.length === 0" class="flex items-center justify-center h-48 text-gray-400 dark:text-gray-500 text-sm">
+            <div x-show="scoreHistory.length === 0" class="flex flex-col items-center justify-center h-40 text-[#5B6B82] text-sm">
+                <svg class="w-10 h-10 mb-3 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                </svg>
                 No audit scores recorded yet.
             </div>
             <div x-show="scoreHistory.length > 0">
@@ -121,41 +132,46 @@
             </div>
         </div>
 
-        <!-- ── Score History Table ───────────────────────────────────── -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-            <h2 class="text-base font-semibold text-gray-900 dark:text-white mb-4">Audit History</h2>
+        <!-- ── Audit History Table ─────────────────────────────────────── -->
+        <div class="bg-white dark:bg-[#0F2337] rounded-xl border border-[#DDE3EC] dark:border-[#1A3352] shadow-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-[#DDE3EC] dark:border-[#1A3352] bg-[#F8FAFC] dark:bg-[#071B2F] flex items-center justify-between">
+                <div>
+                    <h2 class="text-sm font-semibold text-[#0A1628] dark:text-white">Audit History</h2>
+                    <p class="text-xs text-[#5B6B82] mt-0.5">Complete record of all assessments</p>
+                </div>
+                <span class="text-xs text-[#5B6B82]" x-text="scoreHistory.length + ' record(s)'"></span>
+            </div>
 
-            <div x-show="scoreHistory.length === 0" class="text-center py-8 text-gray-400 dark:text-gray-500 text-sm">
+            <div x-show="scoreHistory.length === 0" class="text-center py-12 text-[#5B6B82] text-sm">
                 No audit records found.
             </div>
 
             <div x-show="scoreHistory.length > 0" class="overflow-x-auto">
                 <table class="min-w-full text-sm">
                     <thead>
-                        <tr class="bg-gray-50 dark:bg-gray-700 text-left">
-                            <th class="px-4 py-3 font-medium text-gray-600 dark:text-gray-300">#</th>
-                            <th class="px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Date</th>
-                            <th class="px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Organization</th>
-                            <th class="px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Type</th>
-                            <th class="px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Score</th>
-                            <th class="px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Stars</th>
-                            <th class="px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Essential</th>
-                            <th class="px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Form Breakdown</th>
+                        <tr class="bg-[#F8FAFC] dark:bg-[#071B2F] text-left border-b border-[#DDE3EC] dark:border-[#1A3352]">
+                            <th class="px-4 py-3 text-xs font-semibold text-[#5B6B82] uppercase tracking-wider">#</th>
+                            <th class="px-4 py-3 text-xs font-semibold text-[#5B6B82] uppercase tracking-wider">Date</th>
+                            <th class="px-4 py-3 text-xs font-semibold text-[#5B6B82] uppercase tracking-wider">Organization</th>
+                            <th class="px-4 py-3 text-xs font-semibold text-[#5B6B82] uppercase tracking-wider">Type</th>
+                            <th class="px-4 py-3 text-xs font-semibold text-[#5B6B82] uppercase tracking-wider">Score</th>
+                            <th class="px-4 py-3 text-xs font-semibold text-[#5B6B82] uppercase tracking-wider">Stars</th>
+                            <th class="px-4 py-3 text-xs font-semibold text-[#5B6B82] uppercase tracking-wider">Essential</th>
+                            <th class="px-4 py-3 text-xs font-semibold text-[#5B6B82] uppercase tracking-wider">Form Breakdown</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                        <!-- Reversed so newest is at top in the table -->
+                    <tbody class="divide-y divide-[#EEF2F7] dark:divide-[#1A3352]">
                         <template x-for="(s, idx) in [...scoreHistory].reverse()" :key="s.id">
-                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                                <td class="px-4 py-3 text-gray-400 dark:text-gray-500 text-xs font-mono"
+                            <tr class="hover:bg-[#F8FAFC] dark:hover:bg-[#071B2F] transition-colors">
+                                <td class="px-4 py-3 text-[#5B6B82] text-xs font-mono"
                                     x-text="scoreHistory.length - idx"></td>
-                                <td class="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap"
+                                <td class="px-4 py-3 text-[#5B6B82] text-xs whitespace-nowrap"
                                     x-text="s.assessment_date || fmtDate(s.calculated_at)"></td>
-                                <td class="px-4 py-3 text-gray-800 dark:text-gray-200 max-w-[180px] truncate"
+                                <td class="px-4 py-3 text-[#0A1628] dark:text-white font-medium max-w-[180px] truncate"
                                     :title="s.organization_name || '—'"
                                     x-text="s.organization_name || '—'"></td>
                                 <td class="px-4 py-3">
-                                    <span class="px-2 py-0.5 rounded text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"
+                                    <span class="px-2 py-0.5 rounded text-xs font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
                                           x-text="s.assessment_type || '—'"></span>
                                 </td>
                                 <td class="px-4 py-3">
@@ -166,31 +182,30 @@
                                 <td class="px-4 py-3" x-html="starHtml(s.star_rating)"></td>
                                 <td class="px-4 py-3">
                                     <span x-show="s.essential_flag"
-                                          class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300">
+                                          class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800">
                                         FLAGGED
                                     </span>
                                     <span x-show="!s.essential_flag"
-                                          class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300">
+                                          class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                                         OK
                                     </span>
                                 </td>
-                                <!-- Form scores breakdown (collapsible inline) -->
                                 <td class="px-4 py-3">
                                     <div x-show="s.form_scores && Object.keys(s.form_scores).length > 0"
                                          class="space-y-0.5">
                                         <template x-for="[code, data] in Object.entries(s.form_scores || {})" :key="code">
                                             <div class="flex items-center space-x-1 text-xs">
-                                                <span class="font-mono text-gray-500 dark:text-gray-400 w-16 truncate" x-text="code"></span>
-                                                <span class="text-gray-400 dark:text-gray-500">→</span>
-                                                <span class="font-semibold text-gray-700 dark:text-gray-300"
+                                                <span class="font-mono text-[#5B6B82] w-16 truncate" x-text="code"></span>
+                                                <span class="text-[#5B6B82]">→</span>
+                                                <span class="font-semibold text-[#0A1628] dark:text-white"
                                                       x-text="data.score?.toFixed(2)"></span>
-                                                <span class="text-gray-400 dark:text-gray-500 text-xs"
+                                                <span class="text-[#5B6B82] text-xs"
                                                       x-text="'×' + Math.round((data.weight||0)*100) + '%'"></span>
                                             </div>
                                         </template>
                                     </div>
                                     <span x-show="!s.form_scores || Object.keys(s.form_scores).length === 0"
-                                          class="text-gray-300 dark:text-gray-600 text-xs">—</span>
+                                          class="text-[#5B6B82] text-xs">—</span>
                                 </td>
                             </tr>
                         </template>
@@ -199,11 +214,14 @@
             </div>
         </div>
 
-        <!-- ── Back link ─────────────────────────────────────────────── -->
-        <div class="text-center pb-4">
+        <!-- ── Back link ──────────────────────────────────────────────── -->
+        <div class="pb-4">
             <a :href="'/board/' + boardCode + '/scoring'"
-               class="text-sm text-qci-accent hover:underline">
-                ← Back to Scoring Dashboard
+               class="inline-flex items-center space-x-1.5 text-sm text-[#1A6BBF] hover:underline">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+                <span>Back to Scoring Dashboard</span>
             </a>
         </div>
 
@@ -340,11 +358,11 @@ function assessorProfileApp(assessorId, boardCode) {
 
         boardColor(code) {
             return {
-                NABL: 'bg-blue-600',
-                NABH: 'bg-emerald-600',
+                NABL: 'bg-blue-700',
+                NABH: 'bg-emerald-700',
                 NABCB: 'bg-orange-600',
-                NABET: 'bg-purple-600',
-            }[code] || 'bg-gray-600';
+                NABET: 'bg-violet-700',
+            }[code] || 'bg-[#5B6B82]';
         },
 
         fmtDate(iso) {

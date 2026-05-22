@@ -5,48 +5,56 @@
 <div x-data="boardAdmin('{{ board_code }}')" x-init="init()" x-cloak>
 
     <!-- Breadcrumb -->
-    <nav class="mb-6 text-sm">
-        <a href="/" class="text-qci-accent hover:underline">Dashboard</a>
-        <span class="mx-2 text-gray-400 dark:text-gray-500">/</span>
-        <span class="text-gray-700 dark:text-gray-300" x-text="board.code"></span>
+    <nav class="mb-6 text-sm flex items-center space-x-2">
+        <a href="/" class="text-[#1A6BBF] hover:text-[#071B2F] dark:hover:text-blue-300 transition">Dashboard</a>
+        <span class="text-[#DDE3EC] dark:text-[#1A3352]">/</span>
+        <span class="text-[#5B6B82]" x-text="board.code"></span>
     </nav>
 
-    <!-- Board Header -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
-        <div class="flex items-start justify-between flex-wrap gap-4">
-            <div class="flex items-center space-x-3">
-                <div class="w-14 h-14 rounded-xl flex items-center justify-center text-white font-bold"
-                     :class="boardColor(board.code)">
-                    <span x-text="board.code" class="text-sm"></span>
+    <!-- Board Header Banner -->
+    <div class="rounded-xl overflow-hidden border border-[#DDE3EC] dark:border-[#1A3352] shadow-sm mb-6">
+        <!-- Colored top stripe -->
+        <div class="h-1.5" :class="boardColor(board.code)"></div>
+        <div class="bg-white dark:bg-[#0F2337] px-6 py-5">
+            <div class="flex items-start justify-between flex-wrap gap-4">
+                <div class="flex items-center space-x-4">
+                    <div class="w-14 h-14 rounded-xl flex items-center justify-center text-white font-bold text-lg"
+                         :class="boardColor(board.code)">
+                        <span x-text="board.code" class="text-sm"></span>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold text-[#0A1628] dark:text-white" x-text="board.name"></h1>
+                        <p class="text-[#5B6B82] text-sm mt-0.5" x-text="board.description"></p>
+                    </div>
                 </div>
-                <div>
-                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white" x-text="board.name"></h1>
-                    <p class="text-gray-500 dark:text-gray-400 text-sm mt-1" x-text="board.description"></p>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium"
+                          :class="board.config?.rating_engine === 'percentage'
+                              ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300'
+                              : 'bg-blue-100 text-[#1A6BBF] dark:bg-blue-900/40 dark:text-blue-300'">
+                        <span x-text="board.config?.rating_engine === 'percentage' ? 'Percentage Engine' : 'Numeric Engine (1–5)'"></span>
+                    </span>
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-[#F8FAFC] dark:bg-[#0A1628] text-[#5B6B82] border border-[#DDE3EC] dark:border-[#1A3352]">
+                        Window: <span x-text="board.config?.cumulative_window || 10" class="ml-1 font-semibold text-[#0A1628] dark:text-white"></span> audits
+                    </span>
+                    <a href="/board/{{ board_code }}/scoring"
+                       class="inline-flex items-center px-4 py-1.5 rounded-lg text-xs font-medium bg-[#071B2F] text-white hover:bg-[#0D2F52] transition">
+                        Assessors &amp; Scoring →
+                    </a>
                 </div>
-            </div>
-            <div class="flex items-center space-x-2 flex-wrap gap-2">
-                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium"
-                      :class="board.config?.rating_engine === 'percentage' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300' : 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'">
-                    <span x-text="board.config?.rating_engine === 'percentage' ? 'Percentage Engine' : 'Numeric Engine (1–5)'"></span>
-                </span>
-                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
-                    Window: <span x-text="board.config?.cumulative_window || 10" class="ml-1 font-semibold"></span> audits
-                </span>
-                <a href="/board/{{ board_code }}/scoring"
-                   class="inline-flex items-center px-4 py-1.5 rounded-lg text-xs font-medium bg-qci-accent text-white hover:bg-blue-700 transition">
-                    Assessors &amp; Scoring →
-                </a>
             </div>
         </div>
     </div>
 
-    <!-- Tabs -->
-    <div class="border-b border-gray-200 dark:border-gray-700 mb-6">
+    <!-- Tab bar: underline style -->
+    <div class="border-b border-[#DDE3EC] dark:border-[#1A3352] mb-7">
         <nav class="-mb-px flex space-x-6 overflow-x-auto">
             <template x-for="tab in visibleTabs" :key="tab">
                 <button @click="activeTab = tab; if(tab==='Audit Log') loadAuditLogs()"
                         class="py-3 px-1 border-b-2 font-medium text-sm whitespace-nowrap transition-colors"
-                        :class="activeTab===tab ? 'border-qci-accent text-qci-accent' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:border-gray-300'">
+                        :class="activeTab===tab
+                            ? 'border-[#071B2F] dark:border-white text-[#071B2F] dark:text-white'
+                            : 'border-transparent text-[#5B6B82] hover:text-[#0A1628] dark:hover:text-white hover:border-[#DDE3EC]'">
                     <span x-text="tab"></span>
                 </button>
             </template>
@@ -57,68 +65,68 @@
     <!-- PROGRAMS TAB                                                        -->
     <!-- ================================================================== -->
     <div x-show="activeTab === 'Programs'">
-        <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+        <div class="flex items-center justify-between mb-5 flex-wrap gap-3">
             <div>
-                <h2 class="text-lg font-semibold dark:text-white">Service Lines &amp; Programs</h2>
-                <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Organise the accreditation programs this board offers.</p>
+                <h2 class="text-lg font-semibold text-[#0A1628] dark:text-white">Service Lines &amp; Programs</h2>
+                <p class="text-sm text-[#5B6B82] mt-0.5">Organise the accreditation programs this board offers.</p>
             </div>
             <button @click="showAddSL = true"
-                    class="px-4 py-2 bg-qci-accent text-white text-sm font-medium rounded-lg hover:bg-blue-700">
+                    class="px-5 py-2.5 bg-[#071B2F] text-white text-sm font-medium rounded-lg hover:bg-[#0D2F52] transition">
                 + Add Service Line
             </button>
         </div>
 
         <div class="space-y-4">
             <template x-for="sl in serviceLines" :key="sl.id">
-                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div class="bg-white dark:bg-[#0F2337] rounded-xl border border-[#DDE3EC] dark:border-[#1A3352] shadow-sm overflow-hidden">
                     <!-- Service line header -->
-                    <div class="px-6 py-4 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600 flex items-center justify-between">
+                    <div class="px-6 py-4 bg-[#F8FAFC] dark:bg-[#0A1628] border-b border-[#DDE3EC] dark:border-[#1A3352] flex items-center justify-between">
                         <div class="flex items-center space-x-3">
-                            <div class="w-8 h-8 rounded-lg bg-qci-blue flex items-center justify-center">
+                            <div class="w-8 h-8 rounded-lg bg-[#071B2F] flex items-center justify-center">
                                 <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                           d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
                                 </svg>
                             </div>
                             <div>
-                                <h3 class="font-semibold text-gray-900 dark:text-white" x-text="sl.name"></h3>
-                                <code class="text-xs text-gray-400 dark:text-gray-500" x-text="sl.code"></code>
+                                <h3 class="font-semibold text-[#0A1628] dark:text-white" x-text="sl.name"></h3>
+                                <code class="text-xs text-[#5B6B82]" x-text="sl.code"></code>
                             </div>
                         </div>
                         <div class="flex items-center space-x-3">
                             <button @click="addingProgramTo = sl.id; showAddProgram = true"
-                                    class="text-qci-accent hover:text-blue-700 text-sm font-medium">
+                                    class="text-[#1A6BBF] hover:text-[#071B2F] dark:hover:text-blue-300 text-sm font-medium transition">
                                 + Add Program
                             </button>
                             <button @click="openEditSL(sl)"
-                                    class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xs">Edit</button>
+                                    class="text-[#5B6B82] hover:text-[#0A1628] dark:hover:text-white text-xs transition">Edit</button>
                             <button @click="deleteSL(sl.id)"
-                                    class="text-red-400 hover:text-red-600 text-xs">Delete</button>
+                                    class="text-red-500 hover:text-red-700 text-xs transition">Delete</button>
                         </div>
                     </div>
 
-                    <!-- Programs -->
-                    <div class="divide-y divide-gray-50 dark:divide-gray-700">
+                    <!-- Programs list -->
+                    <div class="divide-y divide-[#EEF2F7] dark:divide-[#1A3352]">
                         <template x-for="prog in sl.programs || []" :key="prog.id">
-                            <div class="px-6 py-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700">
+                            <div class="px-6 py-3 flex items-center justify-between hover:bg-[#F8FAFC] dark:hover:bg-[#0A1628] transition">
                                 <div class="flex items-center space-x-3">
-                                    <span class="w-2 h-2 rounded-full bg-qci-gold flex-shrink-0"></span>
+                                    <span class="w-2 h-2 rounded-full flex-shrink-0" style="background: #B8901C;"></span>
                                     <div>
-                                        <span class="text-sm font-medium text-gray-800 dark:text-gray-200" x-text="prog.name"></span>
+                                        <span class="text-sm font-medium text-[#0A1628] dark:text-white" x-text="prog.name"></span>
                                         <span x-show="prog.standard_version"
-                                              class="ml-2 text-xs text-gray-400 dark:text-gray-500 font-mono" x-text="prog.standard_version"></span>
+                                              class="ml-2 text-xs text-[#5B6B82] font-mono" x-text="prog.standard_version"></span>
                                     </div>
                                 </div>
                                 <div class="flex items-center space-x-3">
                                     <button @click="openEditProgram(sl.id, prog)"
-                                            class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xs">Edit</button>
+                                            class="text-[#5B6B82] hover:text-[#0A1628] dark:hover:text-white text-xs transition">Edit</button>
                                     <button @click="deleteProgram(sl.id, prog.id)"
-                                            class="text-red-400 hover:text-red-600 text-xs">Delete</button>
+                                            class="text-red-500 hover:text-red-700 text-xs transition">Delete</button>
                                 </div>
                             </div>
                         </template>
                         <div x-show="!sl.programs || sl.programs.length === 0"
-                             class="px-6 py-4 text-sm text-gray-400 dark:text-gray-500 italic">
+                             class="px-6 py-4 text-sm text-[#5B6B82] italic">
                             No programs yet — click "Add Program" to add one.
                         </div>
                     </div>
@@ -126,118 +134,119 @@
             </template>
 
             <div x-show="serviceLines.length === 0"
-                 class="bg-white dark:bg-gray-800 rounded-xl border border-dashed border-gray-300 dark:border-gray-600 p-12 text-center">
-                <p class="text-gray-400 dark:text-gray-500 text-sm">No service lines yet. Add one to start organising programs.</p>
+                 class="bg-white dark:bg-[#0F2337] rounded-xl border border-dashed border-[#DDE3EC] dark:border-[#1A3352] p-12 text-center">
+                <p class="text-[#5B6B82] text-sm">No service lines yet. Add one to start organising programs.</p>
             </div>
         </div>
 
         <!-- Add Service Line modal -->
-        <div x-show="showAddSL" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" @click.self="showAddSL=false">
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-md">
-                <h3 class="text-lg font-semibold dark:text-white mb-4">Add Service Line</h3>
+        <div x-show="showAddSL" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" @click.self="showAddSL=false">
+            <div class="bg-white dark:bg-[#0F2337] rounded-2xl shadow-2xl p-7 w-full max-w-md border border-[#DDE3EC] dark:border-[#1A3352]">
+                <h3 class="text-lg font-bold text-[#0A1628] dark:text-white mb-5">Add Service Line</h3>
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name</label>
+                        <label class="block text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-1.5">Name</label>
                         <input x-model="newSL.name" type="text" placeholder="e.g. Testing Laboratories"
-                               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                               class="w-full border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-[#0A1628] text-[#0A1628] dark:text-white focus:ring-2 focus:ring-[#1A6BBF] outline-none transition">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Code</label>
+                        <label class="block text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-1.5">Code</label>
                         <input x-model="newSL.code" type="text" placeholder="e.g. SL_TESTING"
-                               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm font-mono bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                               class="w-full border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-3 py-2.5 text-sm font-mono bg-white dark:bg-[#0A1628] text-[#0A1628] dark:text-white focus:ring-2 focus:ring-[#1A6BBF] outline-none transition">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description (optional)</label>
+                        <label class="block text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-1.5">Description (optional)</label>
                         <input x-model="newSL.description" type="text"
-                               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                               class="w-full border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-[#0A1628] text-[#0A1628] dark:text-white focus:ring-2 focus:ring-[#1A6BBF] outline-none transition">
                     </div>
                 </div>
                 <div class="mt-6 flex justify-end space-x-3">
-                    <button @click="showAddSL=false" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">Cancel</button>
-                    <button @click="addSL()" class="px-4 py-2 bg-qci-accent text-white text-sm rounded-lg hover:bg-blue-700">Add</button>
+                    <button @click="showAddSL=false" class="px-4 py-2 text-sm text-[#5B6B82] hover:text-[#0A1628] dark:hover:text-white transition">Cancel</button>
+                    <button @click="addSL()" class="px-5 py-2.5 bg-[#071B2F] text-white text-sm font-medium rounded-lg hover:bg-[#0D2F52] transition">Add</button>
                 </div>
             </div>
         </div>
 
         <!-- Add Program modal -->
-        <div x-show="showAddProgram" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" @click.self="showAddProgram=false">
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-md">
-                <h3 class="text-lg font-semibold dark:text-white mb-4">Add Program</h3>
+        <div x-show="showAddProgram" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" @click.self="showAddProgram=false">
+            <div class="bg-white dark:bg-[#0F2337] rounded-2xl shadow-2xl p-7 w-full max-w-md border border-[#DDE3EC] dark:border-[#1A3352]">
+                <h3 class="text-lg font-bold text-[#0A1628] dark:text-white mb-5">Add Program</h3>
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Program Name</label>
+                        <label class="block text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-1.5">Program Name</label>
                         <input x-model="newProgram.name" type="text" placeholder="e.g. ISO/IEC 17025 Testing"
-                               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                               class="w-full border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-[#0A1628] text-[#0A1628] dark:text-white focus:ring-2 focus:ring-[#1A6BBF] outline-none transition">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Code</label>
+                        <label class="block text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-1.5">Code</label>
                         <input x-model="newProgram.code" type="text" placeholder="e.g. P_ISO17025T"
-                               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm font-mono bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                               class="w-full border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-3 py-2.5 text-sm font-mono bg-white dark:bg-[#0A1628] text-[#0A1628] dark:text-white focus:ring-2 focus:ring-[#1A6BBF] outline-none transition">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Standard / Version (optional)</label>
+                        <label class="block text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-1.5">Standard / Version (optional)</label>
                         <input x-model="newProgram.standard_version" type="text" placeholder="e.g. ISO/IEC 17025:2017"
-                               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                               class="w-full border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-[#0A1628] text-[#0A1628] dark:text-white focus:ring-2 focus:ring-[#1A6BBF] outline-none transition">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description (optional)</label>
+                        <label class="block text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-1.5">Description (optional)</label>
                         <input x-model="newProgram.description" type="text"
-                               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                               class="w-full border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-[#0A1628] text-[#0A1628] dark:text-white focus:ring-2 focus:ring-[#1A6BBF] outline-none transition">
                     </div>
                 </div>
                 <div class="mt-6 flex justify-end space-x-3">
-                    <button @click="showAddProgram=false" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">Cancel</button>
-                    <button @click="addProgram()" class="px-4 py-2 bg-qci-accent text-white text-sm rounded-lg hover:bg-blue-700">Add</button>
+                    <button @click="showAddProgram=false" class="px-4 py-2 text-sm text-[#5B6B82] hover:text-[#0A1628] dark:hover:text-white transition">Cancel</button>
+                    <button @click="addProgram()" class="px-5 py-2.5 bg-[#071B2F] text-white text-sm font-medium rounded-lg hover:bg-[#0D2F52] transition">Add</button>
                 </div>
             </div>
         </div>
+
         <!-- Edit Service Line modal -->
-        <div x-show="showEditSL" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" @click.self="showEditSL=false">
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-md">
-                <h3 class="text-lg font-semibold dark:text-white mb-4">Edit Service Line</h3>
+        <div x-show="showEditSL" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" @click.self="showEditSL=false">
+            <div class="bg-white dark:bg-[#0F2337] rounded-2xl shadow-2xl p-7 w-full max-w-md border border-[#DDE3EC] dark:border-[#1A3352]">
+                <h3 class="text-lg font-bold text-[#0A1628] dark:text-white mb-5">Edit Service Line</h3>
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name</label>
+                        <label class="block text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-1.5">Name</label>
                         <input x-model="editSLData.name" type="text"
-                               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                               class="w-full border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-[#0A1628] text-[#0A1628] dark:text-white focus:ring-2 focus:ring-[#1A6BBF] outline-none transition">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description (optional)</label>
+                        <label class="block text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-1.5">Description (optional)</label>
                         <input x-model="editSLData.description" type="text"
-                               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                               class="w-full border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-[#0A1628] text-[#0A1628] dark:text-white focus:ring-2 focus:ring-[#1A6BBF] outline-none transition">
                     </div>
                 </div>
                 <div class="mt-6 flex justify-end space-x-3">
-                    <button @click="showEditSL=false" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">Cancel</button>
-                    <button @click="saveEditSL()" class="px-4 py-2 bg-qci-accent text-white text-sm rounded-lg hover:bg-blue-700">Save</button>
+                    <button @click="showEditSL=false" class="px-4 py-2 text-sm text-[#5B6B82] hover:text-[#0A1628] dark:hover:text-white transition">Cancel</button>
+                    <button @click="saveEditSL()" class="px-5 py-2.5 bg-[#071B2F] text-white text-sm font-medium rounded-lg hover:bg-[#0D2F52] transition">Save</button>
                 </div>
             </div>
         </div>
 
         <!-- Edit Program modal -->
-        <div x-show="showEditProgram" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" @click.self="showEditProgram=false">
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-md">
-                <h3 class="text-lg font-semibold dark:text-white mb-4">Edit Program</h3>
+        <div x-show="showEditProgram" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" @click.self="showEditProgram=false">
+            <div class="bg-white dark:bg-[#0F2337] rounded-2xl shadow-2xl p-7 w-full max-w-md border border-[#DDE3EC] dark:border-[#1A3352]">
+                <h3 class="text-lg font-bold text-[#0A1628] dark:text-white mb-5">Edit Program</h3>
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Program Name</label>
+                        <label class="block text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-1.5">Program Name</label>
                         <input x-model="editProgData.name" type="text"
-                               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                               class="w-full border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-[#0A1628] text-[#0A1628] dark:text-white focus:ring-2 focus:ring-[#1A6BBF] outline-none transition">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Standard / Version (optional)</label>
+                        <label class="block text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-1.5">Standard / Version (optional)</label>
                         <input x-model="editProgData.standard_version" type="text"
-                               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                               class="w-full border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-[#0A1628] text-[#0A1628] dark:text-white focus:ring-2 focus:ring-[#1A6BBF] outline-none transition">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description (optional)</label>
+                        <label class="block text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-1.5">Description (optional)</label>
                         <input x-model="editProgData.description" type="text"
-                               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                               class="w-full border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-[#0A1628] text-[#0A1628] dark:text-white focus:ring-2 focus:ring-[#1A6BBF] outline-none transition">
                     </div>
                 </div>
                 <div class="mt-6 flex justify-end space-x-3">
-                    <button @click="showEditProgram=false" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">Cancel</button>
-                    <button @click="saveEditProgram()" class="px-4 py-2 bg-qci-accent text-white text-sm rounded-lg hover:bg-blue-700">Save</button>
+                    <button @click="showEditProgram=false" class="px-4 py-2 text-sm text-[#5B6B82] hover:text-[#0A1628] dark:hover:text-white transition">Cancel</button>
+                    <button @click="saveEditProgram()" class="px-5 py-2.5 bg-[#071B2F] text-white text-sm font-medium rounded-lg hover:bg-[#0D2F52] transition">Save</button>
                 </div>
             </div>
         </div>
@@ -247,49 +256,51 @@
     <!-- USERS (ASSESSORS) TAB                                               -->
     <!-- ================================================================== -->
     <div x-show="activeTab === 'Users'">
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-            <div class="flex justify-between items-center mb-4 flex-wrap gap-3">
+        <div class="bg-white dark:bg-[#0F2337] rounded-xl border border-[#DDE3EC] dark:border-[#1A3352] shadow-sm overflow-hidden">
+            <div class="px-6 py-4 bg-[#F8FAFC] dark:bg-[#0A1628] border-b border-[#DDE3EC] dark:border-[#1A3352] flex justify-between items-center flex-wrap gap-3">
                 <div>
-                    <h2 class="text-lg font-semibold dark:text-white">Assessors &amp; Evaluators</h2>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">People who participate in assessments under this board.</p>
+                    <h2 class="text-sm font-semibold text-[#0A1628] dark:text-white">Assessors &amp; Evaluators</h2>
+                    <p class="text-xs text-[#5B6B82] mt-0.5">People who participate in assessments under this board.</p>
                 </div>
                 <button @click="showAddAssessor = true"
-                        class="px-4 py-2 bg-qci-accent text-white text-sm font-medium rounded-lg hover:bg-blue-700">
+                        class="px-5 py-2.5 bg-[#071B2F] text-white text-sm font-medium rounded-lg hover:bg-[#0D2F52] transition">
                     + Add Assessor
                 </button>
             </div>
             <div class="overflow-x-auto">
                 <table class="min-w-full text-sm">
                     <thead>
-                        <tr class="bg-gray-50 dark:bg-gray-700 text-left">
-                            <th class="px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Name</th>
-                            <th class="px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Employee ID</th>
-                            <th class="px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Role</th>
-                            <th class="px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Email</th>
-                            <th class="px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Audits</th>
-                            <th class="px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Status</th>
-                            <th class="px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Actions</th>
+                        <tr class="bg-[#F8FAFC] dark:bg-[#0A1628] text-left">
+                            <th class="px-5 py-3 text-xs font-semibold text-[#5B6B82] uppercase tracking-wider">Name</th>
+                            <th class="px-5 py-3 text-xs font-semibold text-[#5B6B82] uppercase tracking-wider">Employee ID</th>
+                            <th class="px-5 py-3 text-xs font-semibold text-[#5B6B82] uppercase tracking-wider">Role</th>
+                            <th class="px-5 py-3 text-xs font-semibold text-[#5B6B82] uppercase tracking-wider">Email</th>
+                            <th class="px-5 py-3 text-xs font-semibold text-[#5B6B82] uppercase tracking-wider">Audits</th>
+                            <th class="px-5 py-3 text-xs font-semibold text-[#5B6B82] uppercase tracking-wider">Status</th>
+                            <th class="px-5 py-3 text-xs font-semibold text-[#5B6B82] uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                    <tbody>
                         <template x-for="a in assessors" :key="a.id">
-                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
-                                <td class="px-4 py-3 font-medium text-gray-900 dark:text-white" x-text="a.name"></td>
-                                <td class="px-4 py-3"><code class="text-xs bg-gray-100 dark:bg-gray-700 dark:text-gray-300 px-2 py-0.5 rounded" x-text="a.employee_id"></code></td>
-                                <td class="px-4 py-3 text-gray-600 dark:text-gray-400 text-xs" x-text="a.role_id"></td>
-                                <td class="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs" x-text="a.email || '—'"></td>
-                                <td class="px-4 py-3 text-center text-gray-600 dark:text-gray-400" x-text="a.audit_count"></td>
-                                <td class="px-4 py-3">
-                                    <span :class="a.is_active ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'"
+                            <tr class="border-b border-[#EEF2F7] dark:border-[#1A3352] hover:bg-[#F8FAFC] dark:hover:bg-[#0A1628] transition">
+                                <td class="px-5 py-3 font-medium text-[#0A1628] dark:text-white" x-text="a.name"></td>
+                                <td class="px-5 py-3"><code class="text-xs bg-[#F8FAFC] dark:bg-[#0A1628] text-[#5B6B82] px-2 py-0.5 rounded" x-text="a.employee_id"></code></td>
+                                <td class="px-5 py-3 text-[#5B6B82] text-xs" x-text="a.role_id"></td>
+                                <td class="px-5 py-3 text-[#5B6B82] text-xs" x-text="a.email || '—'"></td>
+                                <td class="px-5 py-3 text-center text-[#5B6B82]" x-text="a.audit_count"></td>
+                                <td class="px-5 py-3">
+                                    <span :class="a.is_active
+                                              ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400'
+                                              : 'bg-[#F8FAFC] text-[#5B6B82] dark:bg-[#1A3352] dark:text-[#5B6B82]'"
                                           class="text-xs px-2 py-0.5 rounded-full font-medium"
                                           x-text="a.is_active ? 'Active' : 'Inactive'"></span>
                                 </td>
-                                <td class="px-4 py-3">
+                                <td class="px-5 py-3">
                                     <div class="flex items-center space-x-3">
-                                        <button @click="openEditAssessor(a)" class="text-qci-accent hover:text-blue-700 text-xs font-medium">Edit</button>
+                                        <button @click="openEditAssessor(a)" class="text-[#1A6BBF] hover:text-[#071B2F] dark:hover:text-blue-300 text-xs font-medium transition">Edit</button>
                                         <button @click="deactivateAssessor(a)"
-                                                class="text-xs font-medium"
-                                                :class="a.is_active ? 'text-red-500 hover:text-red-700' : 'text-gray-400 dark:text-gray-500 cursor-default'"
+                                                class="text-xs font-medium transition"
+                                                :class="a.is_active ? 'text-red-500 hover:text-red-700' : 'text-[#5B6B82] cursor-default'"
                                                 :disabled="!a.is_active"
                                                 x-text="a.is_active ? 'Deactivate' : 'Inactive'">
                                         </button>
@@ -300,31 +311,31 @@
                     </tbody>
                 </table>
             </div>
-            <div x-show="assessors.length === 0" class="text-center py-10 text-gray-400 dark:text-gray-500 text-sm">
+            <div x-show="assessors.length === 0" class="text-center py-12 text-[#5B6B82] text-sm">
                 No assessors registered yet.
             </div>
         </div>
 
         <!-- Edit Assessor modal -->
-        <div x-show="showEditAssessor" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" @click.self="showEditAssessor=false">
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-md">
-                <h3 class="text-lg font-semibold dark:text-white mb-4">Edit Assessor</h3>
+        <div x-show="showEditAssessor" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" @click.self="showEditAssessor=false">
+            <div class="bg-white dark:bg-[#0F2337] rounded-2xl shadow-2xl p-7 w-full max-w-md border border-[#DDE3EC] dark:border-[#1A3352]">
+                <h3 class="text-lg font-bold text-[#0A1628] dark:text-white mb-5">Edit Assessor</h3>
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
+                        <label class="block text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-1.5">Full Name</label>
                         <input x-model="editAssessor.name" type="text"
-                               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                               class="w-full border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-[#0A1628] text-[#0A1628] dark:text-white focus:ring-2 focus:ring-[#1A6BBF] outline-none transition">
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Employee ID</label>
+                            <label class="block text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-1.5">Employee ID</label>
                             <input x-model="editAssessor.employee_id" type="text"
-                                   class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                                   class="w-full border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-[#0A1628] text-[#0A1628] dark:text-white focus:ring-2 focus:ring-[#1A6BBF] outline-none transition">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Role</label>
+                            <label class="block text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-1.5">Role</label>
                             <select x-model="editAssessor.role_id"
-                                    class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                                    class="w-full border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-[#0A1628] text-[#0A1628] dark:text-white focus:ring-2 focus:ring-[#1A6BBF] outline-none transition">
                                 <template x-for="r in board.roles || []" :key="r.system_role_id">
                                     <option :value="r.system_role_id" x-text="r.display_label"></option>
                                 </template>
@@ -332,42 +343,42 @@
                         </div>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
+                        <label class="block text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-1.5">Email</label>
                         <input x-model="editAssessor.email" type="email"
-                               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                               class="w-full border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-[#0A1628] text-[#0A1628] dark:text-white focus:ring-2 focus:ring-[#1A6BBF] outline-none transition">
                     </div>
                     <div class="flex items-center space-x-2">
                         <input type="checkbox" x-model="editAssessor.is_active" id="ea-active" class="rounded">
-                        <label for="ea-active" class="text-sm text-gray-700 dark:text-gray-300">Active</label>
+                        <label for="ea-active" class="text-sm text-[#0A1628] dark:text-white">Active</label>
                     </div>
                 </div>
                 <div class="mt-6 flex justify-end space-x-3">
-                    <button @click="showEditAssessor=false" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">Cancel</button>
-                    <button @click="saveEditAssessor()" class="px-4 py-2 bg-qci-accent text-white text-sm rounded-lg hover:bg-blue-700">Save Changes</button>
+                    <button @click="showEditAssessor=false" class="px-4 py-2 text-sm text-[#5B6B82] hover:text-[#0A1628] dark:hover:text-white transition">Cancel</button>
+                    <button @click="saveEditAssessor()" class="px-5 py-2.5 bg-[#071B2F] text-white text-sm font-medium rounded-lg hover:bg-[#0D2F52] transition">Save Changes</button>
                 </div>
             </div>
         </div>
 
         <!-- Add Assessor modal -->
-        <div x-show="showAddAssessor" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" @click.self="showAddAssessor=false">
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-md">
-                <h3 class="text-lg font-semibold dark:text-white mb-4">Add Assessor</h3>
+        <div x-show="showAddAssessor" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" @click.self="showAddAssessor=false">
+            <div class="bg-white dark:bg-[#0F2337] rounded-2xl shadow-2xl p-7 w-full max-w-md border border-[#DDE3EC] dark:border-[#1A3352]">
+                <h3 class="text-lg font-bold text-[#0A1628] dark:text-white mb-5">Add Assessor</h3>
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
+                        <label class="block text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-1.5">Full Name</label>
                         <input x-model="newAssessor.name" type="text" placeholder="Dr. Anita Sharma"
-                               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                               class="w-full border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-[#0A1628] text-[#0A1628] dark:text-white focus:ring-2 focus:ring-[#1A6BBF] outline-none transition">
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Employee ID</label>
+                            <label class="block text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-1.5">Employee ID</label>
                             <input x-model="newAssessor.employee_id" type="text" placeholder="EMP-0042"
-                                   class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                                   class="w-full border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-[#0A1628] text-[#0A1628] dark:text-white focus:ring-2 focus:ring-[#1A6BBF] outline-none transition">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Role</label>
+                            <label class="block text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-1.5">Role</label>
                             <select x-model="newAssessor.role_id"
-                                    class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                                    class="w-full border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-[#0A1628] text-[#0A1628] dark:text-white focus:ring-2 focus:ring-[#1A6BBF] outline-none transition">
                                 <template x-for="r in board.roles || []" :key="r.system_role_id">
                                     <option :value="r.system_role_id" x-text="r.display_label"></option>
                                 </template>
@@ -375,14 +386,14 @@
                         </div>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
+                        <label class="block text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-1.5">Email</label>
                         <input x-model="newAssessor.email" type="email" placeholder="anita@example.com"
-                               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                               class="w-full border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-[#0A1628] text-[#0A1628] dark:text-white focus:ring-2 focus:ring-[#1A6BBF] outline-none transition">
                     </div>
                 </div>
                 <div class="mt-6 flex justify-end space-x-3">
-                    <button @click="showAddAssessor=false" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">Cancel</button>
-                    <button @click="addAssessor()" class="px-4 py-2 bg-qci-accent text-white text-sm rounded-lg hover:bg-blue-700">Add Assessor</button>
+                    <button @click="showAddAssessor=false" class="px-4 py-2 text-sm text-[#5B6B82] hover:text-[#0A1628] dark:hover:text-white transition">Cancel</button>
+                    <button @click="addAssessor()" class="px-5 py-2.5 bg-[#071B2F] text-white text-sm font-medium rounded-lg hover:bg-[#0D2F52] transition">Add Assessor</button>
                 </div>
             </div>
         </div>
@@ -392,38 +403,38 @@
     <!-- ROLES TAB                                                           -->
     <!-- ================================================================== -->
     <div x-show="activeTab === 'Roles'">
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-            <div class="flex justify-between items-center mb-4 flex-wrap gap-3">
+        <div class="bg-white dark:bg-[#0F2337] rounded-xl border border-[#DDE3EC] dark:border-[#1A3352] shadow-sm overflow-hidden">
+            <div class="px-6 py-4 bg-[#F8FAFC] dark:bg-[#0A1628] border-b border-[#DDE3EC] dark:border-[#1A3352] flex justify-between items-center flex-wrap gap-3">
                 <div>
-                    <h2 class="text-lg font-semibold dark:text-white">Role Mapping &amp; Terminology</h2>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Map system role IDs to board-specific labels.</p>
+                    <h2 class="text-sm font-semibold text-[#0A1628] dark:text-white">Role Mapping &amp; Terminology</h2>
+                    <p class="text-xs text-[#5B6B82] mt-0.5">Map system role IDs to board-specific labels.</p>
                 </div>
                 <button @click="showAddRole = true"
-                        class="px-4 py-2 bg-qci-accent text-white text-sm font-medium rounded-lg hover:bg-blue-700">
+                        class="px-5 py-2.5 bg-[#071B2F] text-white text-sm font-medium rounded-lg hover:bg-[#0D2F52] transition">
                     + Add Role
                 </button>
             </div>
             <div class="overflow-x-auto">
                 <table class="min-w-full text-sm">
                     <thead>
-                        <tr class="bg-gray-50 dark:bg-gray-700 text-left">
-                            <th class="px-4 py-3 font-medium text-gray-600 dark:text-gray-300">System Role ID</th>
-                            <th class="px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Display Label</th>
-                            <th class="px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Can Evaluate</th>
-                            <th class="px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Can Be Evaluated</th>
-                            <th class="px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Actions</th>
+                        <tr class="bg-[#F8FAFC] dark:bg-[#0A1628] text-left">
+                            <th class="px-5 py-3 text-xs font-semibold text-[#5B6B82] uppercase tracking-wider">System Role ID</th>
+                            <th class="px-5 py-3 text-xs font-semibold text-[#5B6B82] uppercase tracking-wider">Display Label</th>
+                            <th class="px-5 py-3 text-xs font-semibold text-[#5B6B82] uppercase tracking-wider">Can Evaluate</th>
+                            <th class="px-5 py-3 text-xs font-semibold text-[#5B6B82] uppercase tracking-wider">Can Be Evaluated</th>
+                            <th class="px-5 py-3 text-xs font-semibold text-[#5B6B82] uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                    <tbody>
                         <template x-for="role in board.roles || []" :key="role.id">
-                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
-                                <td class="px-4 py-3"><code class="text-xs bg-gray-100 dark:bg-gray-700 dark:text-gray-300 px-2 py-1 rounded" x-text="role.system_role_id"></code></td>
-                                <td class="px-4 py-3 font-medium dark:text-gray-200" x-text="role.display_label"></td>
-                                <td class="px-4 py-3"><span :class="role.can_be_evaluator ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'" x-text="role.can_be_evaluator ? 'Yes' : 'No'"></span></td>
-                                <td class="px-4 py-3"><span :class="role.can_be_evaluee ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'" x-text="role.can_be_evaluee ? 'Yes' : 'No'"></span></td>
-                                <td class="px-4 py-3 flex items-center space-x-3">
-                                    <button @click="openEditRole(role)" class="text-qci-accent hover:text-blue-700 text-xs font-medium">Edit</button>
-                                    <button @click="deleteRole(role.id)" class="text-red-500 hover:text-red-700 text-xs">Delete</button>
+                            <tr class="border-b border-[#EEF2F7] dark:border-[#1A3352] hover:bg-[#F8FAFC] dark:hover:bg-[#0A1628] transition">
+                                <td class="px-5 py-3"><code class="text-xs bg-[#F8FAFC] dark:bg-[#0A1628] text-[#5B6B82] px-2 py-1 rounded" x-text="role.system_role_id"></code></td>
+                                <td class="px-5 py-3 font-medium text-[#0A1628] dark:text-white" x-text="role.display_label"></td>
+                                <td class="px-5 py-3"><span :class="role.can_be_evaluator ? 'text-green-600 dark:text-green-400' : 'text-[#5B6B82]'" x-text="role.can_be_evaluator ? 'Yes' : 'No'"></span></td>
+                                <td class="px-5 py-3"><span :class="role.can_be_evaluee ? 'text-green-600 dark:text-green-400' : 'text-[#5B6B82]'" x-text="role.can_be_evaluee ? 'Yes' : 'No'"></span></td>
+                                <td class="px-5 py-3 flex items-center space-x-3">
+                                    <button @click="openEditRole(role)" class="text-[#1A6BBF] hover:text-[#071B2F] dark:hover:text-blue-300 text-xs font-medium transition">Edit</button>
+                                    <button @click="deleteRole(role.id)" class="text-red-500 hover:text-red-700 text-xs transition">Delete</button>
                                 </td>
                             </tr>
                         </template>
@@ -431,55 +442,56 @@
                 </table>
             </div>
         </div>
+
         <!-- Edit Role modal -->
-        <div x-show="showEditRole" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" @click.self="showEditRole=false">
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-md">
-                <h3 class="text-lg font-semibold dark:text-white mb-4">Edit Role Mapping</h3>
+        <div x-show="showEditRole" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" @click.self="showEditRole=false">
+            <div class="bg-white dark:bg-[#0F2337] rounded-2xl shadow-2xl p-7 w-full max-w-md border border-[#DDE3EC] dark:border-[#1A3352]">
+                <h3 class="text-lg font-bold text-[#0A1628] dark:text-white mb-5">Edit Role Mapping</h3>
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">System Role ID</label>
+                        <label class="block text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-1.5">System Role ID</label>
                         <input x-model="editRole.system_role_id" type="text"
-                               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                               class="w-full border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-[#0A1628] text-[#0A1628] dark:text-white focus:ring-2 focus:ring-[#1A6BBF] outline-none transition">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Display Label</label>
+                        <label class="block text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-1.5">Display Label</label>
                         <input x-model="editRole.display_label" type="text"
-                               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                               class="w-full border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-[#0A1628] text-[#0A1628] dark:text-white focus:ring-2 focus:ring-[#1A6BBF] outline-none transition">
                     </div>
                     <div class="flex space-x-4">
-                        <label class="flex items-center text-sm text-gray-700 dark:text-gray-300"><input type="checkbox" x-model="editRole.can_be_evaluator" class="mr-2"> Can Evaluate</label>
-                        <label class="flex items-center text-sm text-gray-700 dark:text-gray-300"><input type="checkbox" x-model="editRole.can_be_evaluee" class="mr-2"> Can Be Evaluated</label>
+                        <label class="flex items-center text-sm text-[#0A1628] dark:text-white"><input type="checkbox" x-model="editRole.can_be_evaluator" class="mr-2"> Can Evaluate</label>
+                        <label class="flex items-center text-sm text-[#0A1628] dark:text-white"><input type="checkbox" x-model="editRole.can_be_evaluee" class="mr-2"> Can Be Evaluated</label>
                     </div>
                 </div>
                 <div class="mt-6 flex justify-end space-x-3">
-                    <button @click="showEditRole=false" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">Cancel</button>
-                    <button @click="saveEditRole()" class="px-4 py-2 bg-qci-accent text-white text-sm rounded-lg hover:bg-blue-700">Save Changes</button>
+                    <button @click="showEditRole=false" class="px-4 py-2 text-sm text-[#5B6B82] hover:text-[#0A1628] dark:hover:text-white transition">Cancel</button>
+                    <button @click="saveEditRole()" class="px-5 py-2.5 bg-[#071B2F] text-white text-sm font-medium rounded-lg hover:bg-[#0D2F52] transition">Save Changes</button>
                 </div>
             </div>
         </div>
 
-        <div x-show="showAddRole" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" @click.self="showAddRole=false">
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-md">
-                <h3 class="text-lg font-semibold dark:text-white mb-4">Add Role Mapping</h3>
+        <div x-show="showAddRole" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" @click.self="showAddRole=false">
+            <div class="bg-white dark:bg-[#0F2337] rounded-2xl shadow-2xl p-7 w-full max-w-md border border-[#DDE3EC] dark:border-[#1A3352]">
+                <h3 class="text-lg font-bold text-[#0A1628] dark:text-white mb-5">Add Role Mapping</h3>
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">System Role ID</label>
+                        <label class="block text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-1.5">System Role ID</label>
                         <input x-model="newRole.system_role_id" type="text" placeholder="e.g. ROLE_LEAD"
-                               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                               class="w-full border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-[#0A1628] text-[#0A1628] dark:text-white focus:ring-2 focus:ring-[#1A6BBF] outline-none transition">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Display Label</label>
+                        <label class="block text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-1.5">Display Label</label>
                         <input x-model="newRole.display_label" type="text" placeholder="e.g. Lead Assessor"
-                               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                               class="w-full border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-[#0A1628] text-[#0A1628] dark:text-white focus:ring-2 focus:ring-[#1A6BBF] outline-none transition">
                     </div>
                     <div class="flex space-x-4">
-                        <label class="flex items-center text-sm text-gray-700 dark:text-gray-300"><input type="checkbox" x-model="newRole.can_be_evaluator" class="mr-2"> Can Evaluate</label>
-                        <label class="flex items-center text-sm text-gray-700 dark:text-gray-300"><input type="checkbox" x-model="newRole.can_be_evaluee" class="mr-2"> Can Be Evaluated</label>
+                        <label class="flex items-center text-sm text-[#0A1628] dark:text-white"><input type="checkbox" x-model="newRole.can_be_evaluator" class="mr-2"> Can Evaluate</label>
+                        <label class="flex items-center text-sm text-[#0A1628] dark:text-white"><input type="checkbox" x-model="newRole.can_be_evaluee" class="mr-2"> Can Be Evaluated</label>
                     </div>
                 </div>
                 <div class="mt-6 flex justify-end space-x-3">
-                    <button @click="showAddRole=false" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">Cancel</button>
-                    <button @click="addRole()" class="px-4 py-2 bg-qci-accent text-white text-sm rounded-lg hover:bg-blue-700">Add Role</button>
+                    <button @click="showAddRole=false" class="px-4 py-2 text-sm text-[#5B6B82] hover:text-[#0A1628] dark:hover:text-white transition">Cancel</button>
+                    <button @click="addRole()" class="px-5 py-2.5 bg-[#071B2F] text-white text-sm font-medium rounded-lg hover:bg-[#0D2F52] transition">Add Role</button>
                 </div>
             </div>
         </div>
@@ -489,84 +501,87 @@
     <!-- FORMS TAB                                                           -->
     <!-- ================================================================== -->
     <div x-show="activeTab === 'Forms'">
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-            <div class="flex justify-between items-center mb-4 flex-wrap gap-3">
-                <h2 class="text-lg font-semibold dark:text-white">Feedback Form Templates</h2>
-                <button @click="showAddForm = true" class="px-4 py-2 bg-qci-accent text-white text-sm font-medium rounded-lg hover:bg-blue-700">+ Add Form</button>
+        <div class="bg-white dark:bg-[#0F2337] rounded-xl border border-[#DDE3EC] dark:border-[#1A3352] shadow-sm overflow-hidden">
+            <div class="px-6 py-4 bg-[#F8FAFC] dark:bg-[#0A1628] border-b border-[#DDE3EC] dark:border-[#1A3352] flex justify-between items-center flex-wrap gap-3">
+                <h2 class="text-sm font-semibold text-[#0A1628] dark:text-white">Feedback Form Templates</h2>
+                <button @click="showAddForm = true" class="px-5 py-2.5 bg-[#071B2F] text-white text-sm font-medium rounded-lg hover:bg-[#0D2F52] transition">+ Add Form</button>
             </div>
-            <div class="mb-6">
-                <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">Stakeholder Weight Distribution (must total 100%)</p>
-                <div class="flex h-8 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700">
+            <div class="p-6">
+                <div class="mb-6">
+                    <p class="text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-2">Stakeholder Weight Distribution (must total 100%)</p>
+                    <div class="flex h-7 rounded-lg overflow-hidden bg-[#F8FAFC] dark:bg-[#0A1628] border border-[#DDE3EC] dark:border-[#1A3352]">
+                        <template x-for="(ft, i) in board.form_templates || []" :key="ft.id">
+                            <div class="flex items-center justify-center text-xs text-white font-medium"
+                                 :style="'width: ' + (ft.stakeholder_weight * 100) + '%'"
+                                 :class="formColors[i % formColors.length]">
+                                <span x-text="ft.code + ' (' + (ft.stakeholder_weight * 100) + '%)'"></span>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <template x-for="(ft, i) in board.form_templates || []" :key="ft.id">
-                        <div class="flex items-center justify-center text-xs text-white font-medium"
-                             :style="'width: ' + (ft.stakeholder_weight * 100) + '%'"
-                             :class="formColors[i % formColors.length]">
-                            <span x-text="ft.code + ' (' + (ft.stakeholder_weight * 100) + '%)'"></span>
+                        <div class="border border-[#DDE3EC] dark:border-[#1A3352] rounded-xl p-4 hover:border-[#1A6BBF] dark:hover:border-[#1A6BBF] transition-colors">
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="font-semibold text-[#0A1628] dark:text-white text-sm" x-text="ft.name"></h3>
+                                <span class="text-xs font-mono bg-[#F8FAFC] dark:bg-[#0A1628] text-[#5B6B82] px-2 py-1 rounded" x-text="ft.code"></span>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2 text-xs text-[#5B6B82] mb-3">
+                                <div>Weight: <span class="font-semibold text-[#0A1628] dark:text-white" x-text="(ft.stakeholder_weight*100)+'%'"></span></div>
+                                <div>Parameters: <span class="font-semibold text-[#0A1628] dark:text-white" x-text="ft.parameters_count"></span></div>
+                            </div>
+                            <div class="flex items-center flex-wrap gap-3 pt-3 border-t border-[#EEF2F7] dark:border-[#1A3352]">
+                                <a :href="'/board/' + board.code + '/form/' + ft.id"
+                                   class="text-[#1A6BBF] hover:text-[#071B2F] dark:hover:text-blue-300 text-xs font-medium transition">Build / Edit →</a>
+                                <a :href="'/board/' + board.code + '/form/' + ft.id + '/preview'" target="_blank"
+                                   class="text-[#5B6B82] hover:text-[#0A1628] dark:hover:text-white text-xs font-medium transition">Preview ↗</a>
+                                <button @click="generateLink(ft.id)"
+                                        class="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 text-xs font-medium transition">
+                                    Copy Link
+                                </button>
+                                <span x-show="copiedFormId === ft.id" class="text-xs text-emerald-600 dark:text-emerald-400">✓ Copied!</span>
+                                <button @click="deleteForm(ft.id, ft.name)"
+                                        class="text-red-500 hover:text-red-700 text-xs transition ml-auto">Delete</button>
+                            </div>
                         </div>
                     </template>
                 </div>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <template x-for="(ft, i) in board.form_templates || []" :key="ft.id">
-                    <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:border-qci-accent transition-colors">
-                        <div class="flex items-center justify-between mb-2">
-                            <h3 class="font-semibold text-gray-900 dark:text-white text-sm" x-text="ft.name"></h3>
-                            <span class="text-xs font-mono bg-gray-100 dark:bg-gray-700 dark:text-gray-300 px-2 py-1 rounded" x-text="ft.code"></span>
-                        </div>
-                        <div class="grid grid-cols-2 gap-2 text-xs text-gray-500 dark:text-gray-400 mb-3">
-                            <div>Weight: <span class="font-semibold text-gray-700 dark:text-gray-300" x-text="(ft.stakeholder_weight*100)+'%'"></span></div>
-                            <div>Parameters: <span class="font-semibold text-gray-700 dark:text-gray-300" x-text="ft.parameters_count"></span></div>
-                        </div>
-                        <div class="flex items-center flex-wrap gap-3 mt-1">
-                            <a :href="'/board/' + board.code + '/form/' + ft.id"
-                               class="text-qci-accent hover:underline text-xs font-medium">Build / Edit →</a>
-                            <a :href="'/board/' + board.code + '/form/' + ft.id + '/preview'" target="_blank"
-                               class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-xs font-medium">Preview ↗</a>
-                            <button @click="generateLink(ft.id)"
-                                    class="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 text-xs font-medium">
-                                Copy Link
-                            </button>
-                            <span x-show="copiedFormId === ft.id" class="text-xs text-emerald-600 dark:text-emerald-400">✓ Copied!</span>
-                            <button @click="deleteForm(ft.id, ft.name)"
-                                    class="text-red-500 hover:text-red-700 text-xs ml-auto">Delete</button>
-                        </div>
-                    </div>
-                </template>
-            </div>
         </div>
-        <!-- Add Form modal — fixed: was missing closing > on outer div -->
-        <div x-show="showAddForm" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" @click.self="showAddForm=false; formError=''">
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
-                <h3 class="text-lg font-semibold dark:text-white mb-4">Add Form Template</h3>
+
+        <!-- Add Form modal -->
+        <div x-show="showAddForm" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" @click.self="showAddForm=false; formError=''">
+            <div class="bg-white dark:bg-[#0F2337] rounded-2xl shadow-2xl p-7 w-full max-w-lg max-h-[90vh] overflow-y-auto border border-[#DDE3EC] dark:border-[#1A3352]">
+                <h3 class="text-lg font-bold text-[#0A1628] dark:text-white mb-5">Add Form Template</h3>
                 <div class="space-y-4">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Code</label>
+                            <label class="block text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-1.5">Code</label>
                             <input x-model="newForm.code" type="text" placeholder="e.g. F_CLIENT"
-                                   class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                                   class="w-full border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-[#0A1628] text-[#0A1628] dark:text-white focus:ring-2 focus:ring-[#1A6BBF] outline-none transition">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Stakeholder Weight</label>
+                            <label class="block text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-1.5">Stakeholder Weight</label>
                             <input x-model.number="newForm.stakeholder_weight" type="number" step="0.05" min="0" max="1" placeholder="e.g. 0.30"
-                                   class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                                   class="w-full border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-[#0A1628] text-[#0A1628] dark:text-white focus:ring-2 focus:ring-[#1A6BBF] outline-none transition">
                         </div>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name</label>
+                        <label class="block text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-1.5">Name</label>
                         <input x-model="newForm.name" type="text" placeholder="e.g. Client Feedback Form"
-                               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                               class="w-full border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-[#0A1628] text-[#0A1628] dark:text-white focus:ring-2 focus:ring-[#1A6BBF] outline-none transition">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Filled by (Evaluator Role)</label>
+                        <label class="block text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-1.5">Filled by (Evaluator Role)</label>
                         <select x-model="newForm.target_evaluator_role"
-                                class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                                class="w-full border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-[#0A1628] text-[#0A1628] dark:text-white focus:ring-2 focus:ring-[#1A6BBF] outline-none transition">
                             <option value="">Select role…</option>
                             <template x-for="r in board.roles" :key="r.system_role_id">
                                 <option :value="r.system_role_id" x-text="r.display_label + ' (' + r.system_role_id + ')'"></option>
                             </template>
                         </select>
                     </div>
-                    <label class="flex items-center text-sm text-gray-700 dark:text-gray-300">
+                    <label class="flex items-center text-sm text-[#0A1628] dark:text-white">
                         <input type="checkbox" x-model="newForm.is_mandatory" class="mr-2"> Mandatory Form
                     </label>
                 </div>
@@ -576,9 +591,9 @@
                     </svg>
                     <p class="text-sm text-red-700 dark:text-red-400" x-text="formError"></p>
                 </div>
-                <div class="mt-4 flex justify-end space-x-3">
-                    <button @click="showAddForm=false; formError=''" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">Cancel</button>
-                    <button @click="addForm()" class="px-4 py-2 bg-qci-accent text-white text-sm rounded-lg hover:bg-blue-700">Add Form</button>
+                <div class="mt-5 flex justify-end space-x-3">
+                    <button @click="showAddForm=false; formError=''" class="px-4 py-2 text-sm text-[#5B6B82] hover:text-[#0A1628] dark:hover:text-white transition">Cancel</button>
+                    <button @click="addForm()" class="px-5 py-2.5 bg-[#071B2F] text-white text-sm font-medium rounded-lg hover:bg-[#0D2F52] transition">Add Form</button>
                 </div>
             </div>
         </div>
@@ -588,69 +603,70 @@
     <!-- FREQUENCY RULES TAB                                                 -->
     <!-- ================================================================== -->
     <div x-show="activeTab === 'Frequency Rules'">
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-            <div class="flex justify-between items-center mb-4 flex-wrap gap-3">
+        <div class="bg-white dark:bg-[#0F2337] rounded-xl border border-[#DDE3EC] dark:border-[#1A3352] shadow-sm overflow-hidden">
+            <div class="px-6 py-4 bg-[#F8FAFC] dark:bg-[#0A1628] border-b border-[#DDE3EC] dark:border-[#1A3352] flex justify-between items-center flex-wrap gap-3">
                 <div>
-                    <h2 class="text-lg font-semibold dark:text-white">Frequency Rules</h2>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">When are feedback forms auto-generated for each role?</p>
+                    <h2 class="text-sm font-semibold text-[#0A1628] dark:text-white">Frequency Rules</h2>
+                    <p class="text-xs text-[#5B6B82] mt-0.5">When are feedback forms auto-generated for each role?</p>
                 </div>
-                <button @click="showAddFreq = true" class="px-4 py-2 bg-qci-accent text-white text-sm font-medium rounded-lg hover:bg-blue-700">+ Add Rule</button>
+                <button @click="showAddFreq = true" class="px-5 py-2.5 bg-[#071B2F] text-white text-sm font-medium rounded-lg hover:bg-[#0D2F52] transition">+ Add Rule</button>
             </div>
             <div class="overflow-x-auto">
                 <table class="min-w-full text-sm">
                     <thead>
-                        <tr class="bg-gray-50 dark:bg-gray-700 text-left">
-                            <th class="px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Role</th>
-                            <th class="px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Trigger</th>
-                            <th class="px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Value</th>
-                            <th class="px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Active</th>
-                            <th class="px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Actions</th>
+                        <tr class="bg-[#F8FAFC] dark:bg-[#0A1628] text-left">
+                            <th class="px-5 py-3 text-xs font-semibold text-[#5B6B82] uppercase tracking-wider">Role</th>
+                            <th class="px-5 py-3 text-xs font-semibold text-[#5B6B82] uppercase tracking-wider">Trigger</th>
+                            <th class="px-5 py-3 text-xs font-semibold text-[#5B6B82] uppercase tracking-wider">Value</th>
+                            <th class="px-5 py-3 text-xs font-semibold text-[#5B6B82] uppercase tracking-wider">Active</th>
+                            <th class="px-5 py-3 text-xs font-semibold text-[#5B6B82] uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                    <tbody>
                         <template x-for="rule in board.frequency_rules || []" :key="rule.id">
-                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
-                                <td class="px-4 py-3"><code class="text-xs bg-gray-100 dark:bg-gray-700 dark:text-gray-300 px-2 py-1 rounded" x-text="rule.role_id"></code></td>
-                                <td class="px-4 py-3">
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                            <tr class="border-b border-[#EEF2F7] dark:border-[#1A3352] hover:bg-[#F8FAFC] dark:hover:bg-[#0A1628] transition">
+                                <td class="px-5 py-3"><code class="text-xs bg-[#F8FAFC] dark:bg-[#0A1628] text-[#5B6B82] px-2 py-1 rounded" x-text="rule.role_id"></code></td>
+                                <td class="px-5 py-3">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
                                           :class="{
-                                              'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300': rule.trigger_type==='EVERY_AUDIT',
-                                              'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300': rule.trigger_type==='POST_N_AUDITS',
-                                              'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300': rule.trigger_type==='QUARTERLY'
+                                              'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400': rule.trigger_type==='EVERY_AUDIT',
+                                              'bg-blue-100 text-[#1A6BBF] dark:bg-blue-900/40 dark:text-blue-300': rule.trigger_type==='POST_N_AUDITS',
+                                              'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400': rule.trigger_type==='QUARTERLY'
                                           }"
                                           x-text="rule.trigger_type.replace(/_/g,' ')"></span>
                                 </td>
-                                <td class="px-4 py-3 text-gray-600 dark:text-gray-400" x-text="rule.trigger_value || '—'"></td>
-                                <td class="px-4 py-3"><span class="w-2 h-2 rounded-full inline-block" :class="rule.is_active !== false ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'"></span></td>
-                                <td class="px-4 py-3"><button @click="deleteFreqRule(rule.id)" class="text-red-500 hover:text-red-700 text-xs">Delete</button></td>
+                                <td class="px-5 py-3 text-[#5B6B82]" x-text="rule.trigger_value || '—'"></td>
+                                <td class="px-5 py-3"><span class="w-2 h-2 rounded-full inline-block" :class="rule.is_active !== false ? 'bg-green-500' : 'bg-[#DDE3EC] dark:bg-[#1A3352]'"></span></td>
+                                <td class="px-5 py-3"><button @click="deleteFreqRule(rule.id)" class="text-red-500 hover:text-red-700 text-xs transition">Delete</button></td>
                             </tr>
                         </template>
                     </tbody>
                 </table>
             </div>
         </div>
-        <div x-show="showAddFreq" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" @click.self="showAddFreq=false">
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-md">
-                <h3 class="text-lg font-semibold dark:text-white mb-4">Add Frequency Rule</h3>
+
+        <div x-show="showAddFreq" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" @click.self="showAddFreq=false">
+            <div class="bg-white dark:bg-[#0F2337] rounded-2xl shadow-2xl p-7 w-full max-w-md border border-[#DDE3EC] dark:border-[#1A3352]">
+                <h3 class="text-lg font-bold text-[#0A1628] dark:text-white mb-5">Add Frequency Rule</h3>
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Role</label>
+                        <label class="block text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-1.5">Role</label>
                         <select x-model="newFreq.role_id"
-                                class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                                class="w-full border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-[#0A1628] text-[#0A1628] dark:text-white focus:ring-2 focus:ring-[#1A6BBF] outline-none transition">
                             <template x-for="r in board.roles" :key="r.system_role_id"><option :value="r.system_role_id" x-text="r.display_label"></option></template>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Form Template</label>
+                        <label class="block text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-1.5">Form Template</label>
                         <select x-model="newFreq.form_template_id"
-                                class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                                class="w-full border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-[#0A1628] text-[#0A1628] dark:text-white focus:ring-2 focus:ring-[#1A6BBF] outline-none transition">
                             <template x-for="ft in board.form_templates" :key="ft.id"><option :value="ft.id" x-text="ft.name"></option></template>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Trigger Type</label>
+                        <label class="block text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-1.5">Trigger Type</label>
                         <select x-model="newFreq.trigger_type"
-                                class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                                class="w-full border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-[#0A1628] text-[#0A1628] dark:text-white focus:ring-2 focus:ring-[#1A6BBF] outline-none transition">
                             <option value="EVERY_AUDIT">Every Audit</option>
                             <option value="POST_N_AUDITS">Post N Audits</option>
                             <option value="QUARTERLY">Quarterly</option>
@@ -659,11 +675,11 @@
                         </select>
                     </div>
                     <div x-show="newFreq.trigger_type === 'POST_N_AUDITS'">
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">N (audit count)</label>
+                        <label class="block text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-1.5">N (audit count)</label>
                         <input x-model.number="newFreq.trigger_value" type="number" min="1"
-                               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                               class="w-full border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-[#0A1628] text-[#0A1628] dark:text-white focus:ring-2 focus:ring-[#1A6BBF] outline-none transition">
                     </div>
-                    <div x-show="newFreq.trigger_type === 'ON_EVENT'" class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg px-4 py-3 text-xs text-blue-700 dark:text-blue-300">
+                    <div x-show="newFreq.trigger_type === 'ON_EVENT'" class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl px-4 py-3 text-xs text-blue-700 dark:text-blue-300">
                         <strong>On Event:</strong> The form is generated automatically whenever an external portal calls the
                         <code class="bg-blue-100 dark:bg-blue-900/40 px-1 rounded">POST /api/v1/triggers/assessment-complete</code>
                         endpoint for this assessor's role. The assessment type (e.g. "Surveillance") is recorded as the trigger reason.
@@ -671,51 +687,50 @@
                     </div>
                 </div>
                 <div class="mt-6 flex justify-end space-x-3">
-                    <button @click="showAddFreq=false" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">Cancel</button>
-                    <button @click="addFreqRule()" class="px-4 py-2 bg-qci-accent text-white text-sm rounded-lg hover:bg-blue-700">Add Rule</button>
+                    <button @click="showAddFreq=false" class="px-4 py-2 text-sm text-[#5B6B82] hover:text-[#0A1628] dark:hover:text-white transition">Cancel</button>
+                    <button @click="addFreqRule()" class="px-5 py-2.5 bg-[#071B2F] text-white text-sm font-medium rounded-lg hover:bg-[#0D2F52] transition">Add Rule</button>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- ================================================================== -->
-    <!-- SYSTEM-ADMIN-ONLY TABS                                              -->
+    <!-- WEBHOOKS TAB                                                        -->
     <!-- ================================================================== -->
-
-    <!-- WEBHOOKS -->
     <div x-show="activeTab === 'Webhooks'">
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-            <div class="flex justify-between items-center mb-4 flex-wrap gap-3">
-                <h2 class="text-lg font-semibold dark:text-white">Webhook Integrations</h2>
-                <button @click="showAddWebhook = true" class="px-4 py-2 bg-qci-accent text-white text-sm font-medium rounded-lg hover:bg-blue-700">+ Add Webhook</button>
+        <div class="bg-white dark:bg-[#0F2337] rounded-xl border border-[#DDE3EC] dark:border-[#1A3352] shadow-sm overflow-hidden">
+            <div class="px-6 py-4 bg-[#F8FAFC] dark:bg-[#0A1628] border-b border-[#DDE3EC] dark:border-[#1A3352] flex justify-between items-center flex-wrap gap-3">
+                <h2 class="text-sm font-semibold text-[#0A1628] dark:text-white">Webhook Integrations</h2>
+                <button @click="showAddWebhook = true" class="px-5 py-2.5 bg-[#071B2F] text-white text-sm font-medium rounded-lg hover:bg-[#0D2F52] transition">+ Add Webhook</button>
             </div>
-            <div class="space-y-3">
+            <div class="divide-y divide-[#EEF2F7] dark:divide-[#1A3352]">
                 <template x-for="hook in webhooks" :key="hook.id">
-                    <div class="flex items-center justify-between border border-gray-200 dark:border-gray-700 rounded-lg p-4 flex-wrap gap-2">
+                    <div class="flex items-center justify-between px-6 py-4 hover:bg-[#F8FAFC] dark:hover:bg-[#0A1628] transition flex-wrap gap-2">
                         <div>
-                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 mr-2" x-text="hook.event_type"></span>
-                            <code class="text-sm text-gray-600 dark:text-gray-400" x-text="hook.target_url"></code>
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 mr-2" x-text="hook.event_type"></span>
+                            <code class="text-sm text-[#5B6B82]" x-text="hook.target_url"></code>
                         </div>
                         <div class="flex items-center space-x-3">
-                            <span :class="hook.is_active ? 'text-green-500 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'"
+                            <span :class="hook.is_active ? 'text-green-600 dark:text-green-400' : 'text-[#5B6B82]'"
                                   class="text-xs" x-text="hook.is_active ? 'Active' : 'Inactive'"></span>
-                            <button @click="openEditWebhook(hook)" class="text-qci-accent hover:text-blue-700 text-xs font-medium">Edit</button>
-                            <button @click="deleteWebhook(hook.id)" class="text-red-500 hover:text-red-700 text-xs">Delete</button>
+                            <button @click="openEditWebhook(hook)" class="text-[#1A6BBF] hover:text-[#071B2F] dark:hover:text-blue-300 text-xs font-medium transition">Edit</button>
+                            <button @click="deleteWebhook(hook.id)" class="text-red-500 hover:text-red-700 text-xs transition">Delete</button>
                         </div>
                     </div>
                 </template>
-                <div x-show="webhooks.length === 0" class="text-center py-8 text-gray-400 dark:text-gray-500 text-sm">No webhooks configured.</div>
+                <div x-show="webhooks.length === 0" class="text-center py-12 text-[#5B6B82] text-sm">No webhooks configured.</div>
             </div>
         </div>
+
         <!-- Edit Webhook modal -->
-        <div x-show="showEditWebhook" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" @click.self="showEditWebhook=false">
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-md">
-                <h3 class="text-lg font-semibold dark:text-white mb-4">Edit Webhook</h3>
+        <div x-show="showEditWebhook" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" @click.self="showEditWebhook=false">
+            <div class="bg-white dark:bg-[#0F2337] rounded-2xl shadow-2xl p-7 w-full max-w-md border border-[#DDE3EC] dark:border-[#1A3352]">
+                <h3 class="text-lg font-bold text-[#0A1628] dark:text-white mb-5">Edit Webhook</h3>
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Event Type</label>
+                        <label class="block text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-1.5">Event Type</label>
                         <select x-model="editWebhook.event_type"
-                                class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                                class="w-full border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-[#0A1628] text-[#0A1628] dark:text-white focus:ring-2 focus:ring-[#1A6BBF] outline-none transition">
                             <option value="ASSESSMENT_CREATED">Assessment Created</option>
                             <option value="FEEDBACK_DUE">Feedback Due</option>
                             <option value="SCORE_CALCULATED">Score Calculated</option>
@@ -723,35 +738,35 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Target URL</label>
+                        <label class="block text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-1.5">Target URL</label>
                         <input x-model="editWebhook.target_url" type="url"
-                               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                               class="w-full border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-[#0A1628] text-[#0A1628] dark:text-white focus:ring-2 focus:ring-[#1A6BBF] outline-none transition">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Secret (optional)</label>
+                        <label class="block text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-1.5">Secret (optional)</label>
                         <input x-model="editWebhook.secret" type="text" placeholder="leave blank to keep current"
-                               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                               class="w-full border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-[#0A1628] text-[#0A1628] dark:text-white focus:ring-2 focus:ring-[#1A6BBF] outline-none transition">
                     </div>
                     <div class="flex items-center space-x-2">
                         <input type="checkbox" x-model="editWebhook.is_active" id="wh-active" class="rounded">
-                        <label for="wh-active" class="text-sm text-gray-700 dark:text-gray-300">Active</label>
+                        <label for="wh-active" class="text-sm text-[#0A1628] dark:text-white">Active</label>
                     </div>
                 </div>
                 <div class="mt-6 flex justify-end space-x-3">
-                    <button @click="showEditWebhook=false" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">Cancel</button>
-                    <button @click="saveEditWebhook()" class="px-4 py-2 bg-qci-accent text-white text-sm rounded-lg hover:bg-blue-700">Save Changes</button>
+                    <button @click="showEditWebhook=false" class="px-4 py-2 text-sm text-[#5B6B82] hover:text-[#0A1628] dark:hover:text-white transition">Cancel</button>
+                    <button @click="saveEditWebhook()" class="px-5 py-2.5 bg-[#071B2F] text-white text-sm font-medium rounded-lg hover:bg-[#0D2F52] transition">Save Changes</button>
                 </div>
             </div>
         </div>
 
-        <div x-show="showAddWebhook" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" @click.self="showAddWebhook=false">
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-md">
-                <h3 class="text-lg font-semibold dark:text-white mb-4">Add Webhook</h3>
+        <div x-show="showAddWebhook" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" @click.self="showAddWebhook=false">
+            <div class="bg-white dark:bg-[#0F2337] rounded-2xl shadow-2xl p-7 w-full max-w-md border border-[#DDE3EC] dark:border-[#1A3352]">
+                <h3 class="text-lg font-bold text-[#0A1628] dark:text-white mb-5">Add Webhook</h3>
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Event Type</label>
+                        <label class="block text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-1.5">Event Type</label>
                         <select x-model="newWebhook.event_type"
-                                class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                                class="w-full border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-[#0A1628] text-[#0A1628] dark:text-white focus:ring-2 focus:ring-[#1A6BBF] outline-none transition">
                             <option value="ASSESSMENT_CREATED">Assessment Created</option>
                             <option value="FEEDBACK_DUE">Feedback Due</option>
                             <option value="SCORE_CALCULATED">Score Calculated</option>
@@ -759,155 +774,160 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Target URL</label>
+                        <label class="block text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-1.5">Target URL</label>
                         <input x-model="newWebhook.target_url" type="url" placeholder="https://portal.example.com/webhook"
-                               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                               class="w-full border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-[#0A1628] text-[#0A1628] dark:text-white focus:ring-2 focus:ring-[#1A6BBF] outline-none transition">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Secret (optional)</label>
+                        <label class="block text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-1.5">Secret (optional)</label>
                         <input x-model="newWebhook.secret" type="text" placeholder="HMAC signing secret"
-                               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                               class="w-full border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-[#0A1628] text-[#0A1628] dark:text-white focus:ring-2 focus:ring-[#1A6BBF] outline-none transition">
                     </div>
                 </div>
                 <div class="mt-6 flex justify-end space-x-3">
-                    <button @click="showAddWebhook=false" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">Cancel</button>
-                    <button @click="addWebhook()" class="px-4 py-2 bg-qci-accent text-white text-sm rounded-lg hover:bg-blue-700">Add Webhook</button>
+                    <button @click="showAddWebhook=false" class="px-4 py-2 text-sm text-[#5B6B82] hover:text-[#0A1628] dark:hover:text-white transition">Cancel</button>
+                    <button @click="addWebhook()" class="px-5 py-2.5 bg-[#071B2F] text-white text-sm font-medium rounded-lg hover:bg-[#0D2F52] transition">Add Webhook</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- PORTAL ADAPTERS -->
+    <!-- ================================================================== -->
+    <!-- PORTAL ADAPTERS TAB                                                 -->
+    <!-- ================================================================== -->
     <div x-show="activeTab === 'Portal Adapters'">
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-            <div class="flex justify-between items-center mb-4 flex-wrap gap-3">
+        <div class="bg-white dark:bg-[#0F2337] rounded-xl border border-[#DDE3EC] dark:border-[#1A3352] shadow-sm overflow-hidden">
+            <div class="px-6 py-4 bg-[#F8FAFC] dark:bg-[#0A1628] border-b border-[#DDE3EC] dark:border-[#1A3352] flex justify-between items-center flex-wrap gap-3">
                 <div>
-                    <h2 class="text-lg font-semibold dark:text-white">Portal Adapters</h2>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Map external portal role IDs and event types to internal PMS concepts.</p>
+                    <h2 class="text-sm font-semibold text-[#0A1628] dark:text-white">Portal Adapters</h2>
+                    <p class="text-xs text-[#5B6B82] mt-0.5">Map external portal role IDs and event types to internal PMS concepts.</p>
                 </div>
-                <button @click="showAddAdapter = true" class="px-4 py-2 bg-qci-accent text-white text-sm font-medium rounded-lg hover:bg-blue-700">+ Add Adapter</button>
+                <button @click="showAddAdapter = true" class="px-5 py-2.5 bg-[#071B2F] text-white text-sm font-medium rounded-lg hover:bg-[#0D2F52] transition">+ Add Adapter</button>
             </div>
-            <div class="space-y-4">
+            <div class="divide-y divide-[#EEF2F7] dark:divide-[#1A3352]">
                 <template x-for="adapter in portalAdapters" :key="adapter.id">
-                    <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-                        <div class="flex items-center justify-between mb-3">
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300" x-text="adapter.portal_id"></span>
+                    <div class="px-6 py-5">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300" x-text="adapter.portal_id"></span>
                             <div class="flex items-center space-x-3">
-                                <button @click="openEditAdapter(adapter)" class="text-qci-accent hover:text-blue-700 text-xs font-medium">Edit</button>
-                                <button @click="deleteAdapter(adapter.id)" class="text-red-500 hover:text-red-700 text-xs">Delete</button>
+                                <button @click="openEditAdapter(adapter)" class="text-[#1A6BBF] hover:text-[#071B2F] dark:hover:text-blue-300 text-xs font-medium transition">Edit</button>
+                                <button @click="deleteAdapter(adapter.id)" class="text-red-500 hover:text-red-700 text-xs transition">Delete</button>
                             </div>
                         </div>
                         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
                             <div>
-                                <p class="font-medium text-gray-600 dark:text-gray-400 mb-1">Role Map</p>
+                                <p class="font-semibold text-[#5B6B82] uppercase tracking-wider mb-2">Role Map</p>
                                 <template x-for="[k,v] in Object.entries(adapter.role_map||{})" :key="k">
                                     <div class="flex items-center space-x-1 py-0.5">
-                                        <code class="bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 px-1.5 py-0.5 rounded" x-text="k"></code>
-                                        <span class="text-gray-400">→</span>
-                                        <code class="bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-1.5 py-0.5 rounded" x-text="v"></code>
+                                        <code class="bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 px-1.5 py-0.5 rounded" x-text="k"></code>
+                                        <span class="text-[#5B6B82]">→</span>
+                                        <code class="bg-blue-50 dark:bg-blue-900/20 text-[#1A6BBF] dark:text-blue-300 px-1.5 py-0.5 rounded" x-text="v"></code>
                                     </div>
                                 </template>
                             </div>
                             <div>
-                                <p class="font-medium text-gray-600 dark:text-gray-400 mb-1">Event Map</p>
+                                <p class="font-semibold text-[#5B6B82] uppercase tracking-wider mb-2">Event Map</p>
                                 <template x-for="[k,v] in Object.entries(adapter.event_map||{})" :key="k">
                                     <div class="flex items-center space-x-1 py-0.5">
-                                        <code class="bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 px-1.5 py-0.5 rounded" x-text="k"></code>
-                                        <span class="text-gray-400">→</span>
-                                        <code class="bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-1.5 py-0.5 rounded" x-text="v"></code>
+                                        <code class="bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 px-1.5 py-0.5 rounded" x-text="k"></code>
+                                        <span class="text-[#5B6B82]">→</span>
+                                        <code class="bg-blue-50 dark:bg-blue-900/20 text-[#1A6BBF] dark:text-blue-300 px-1.5 py-0.5 rounded" x-text="v"></code>
                                     </div>
                                 </template>
                             </div>
                             <div>
-                                <p class="font-medium text-gray-600 dark:text-gray-400 mb-1">Vocabulary</p>
+                                <p class="font-semibold text-[#5B6B82] uppercase tracking-wider mb-2">Vocabulary</p>
                                 <template x-for="[k,v] in Object.entries(adapter.vocabulary_map||{})" :key="k">
                                     <div class="flex items-center space-x-1 py-0.5">
-                                        <span class="text-gray-500 dark:text-gray-400" x-text="k"></span>
-                                        <span class="text-gray-400">→</span>
-                                        <span class="font-medium dark:text-gray-300" x-text="v"></span>
+                                        <span class="text-[#5B6B82]" x-text="k"></span>
+                                        <span class="text-[#5B6B82]">→</span>
+                                        <span class="font-medium text-[#0A1628] dark:text-white" x-text="v"></span>
                                     </div>
                                 </template>
                             </div>
                         </div>
                     </div>
                 </template>
-                <div x-show="portalAdapters.length===0" class="text-center py-8 text-gray-400 dark:text-gray-500 text-sm">No adapters configured.</div>
+                <div x-show="portalAdapters.length===0" class="text-center py-12 text-[#5B6B82] text-sm">No adapters configured.</div>
             </div>
         </div>
+
         <!-- Edit Portal Adapter modal -->
-        <div x-show="showEditAdapter" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" @click.self="showEditAdapter=false; adapterError=''">
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
-                <h3 class="text-lg font-semibold dark:text-white mb-4">Edit Portal Adapter</h3>
+        <div x-show="showEditAdapter" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" @click.self="showEditAdapter=false; adapterError=''">
+            <div class="bg-white dark:bg-[#0F2337] rounded-2xl shadow-2xl p-7 w-full max-w-lg max-h-[90vh] overflow-y-auto border border-[#DDE3EC] dark:border-[#1A3352]">
+                <h3 class="text-lg font-bold text-[#0A1628] dark:text-white mb-5">Edit Portal Adapter</h3>
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Role Map (JSON)</label>
+                        <label class="block text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-1.5">Role Map (JSON)</label>
                         <textarea x-model="editAdapter.role_map_json" rows="3"
-                                  class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm font-mono bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"></textarea>
+                                  class="w-full border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-3 py-2.5 text-sm font-mono bg-white dark:bg-[#0A1628] text-[#0A1628] dark:text-white focus:ring-2 focus:ring-[#1A6BBF] outline-none transition"></textarea>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Event Map (JSON)</label>
+                        <label class="block text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-1.5">Event Map (JSON)</label>
                         <textarea x-model="editAdapter.event_map_json" rows="3"
-                                  class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm font-mono bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"></textarea>
+                                  class="w-full border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-3 py-2.5 text-sm font-mono bg-white dark:bg-[#0A1628] text-[#0A1628] dark:text-white focus:ring-2 focus:ring-[#1A6BBF] outline-none transition"></textarea>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Vocabulary Map (JSON)</label>
+                        <label class="block text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-1.5">Vocabulary Map (JSON)</label>
                         <textarea x-model="editAdapter.vocabulary_map_json" rows="2"
-                                  class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm font-mono bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"></textarea>
+                                  class="w-full border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-3 py-2.5 text-sm font-mono bg-white dark:bg-[#0A1628] text-[#0A1628] dark:text-white focus:ring-2 focus:ring-[#1A6BBF] outline-none transition"></textarea>
                     </div>
                     <div class="flex items-center space-x-2">
                         <input type="checkbox" x-model="editAdapter.is_active" id="adapter-active" class="rounded">
-                        <label for="adapter-active" class="text-sm text-gray-700 dark:text-gray-300">Active</label>
+                        <label for="adapter-active" class="text-sm text-[#0A1628] dark:text-white">Active</label>
                     </div>
-                    <span x-show="adapterError" class="text-red-500 dark:text-red-400 text-xs" x-text="adapterError"></span>
+                    <span x-show="adapterError" class="text-red-500 text-xs" x-text="adapterError"></span>
                 </div>
                 <div class="mt-6 flex justify-end space-x-3">
-                    <button @click="showEditAdapter=false; adapterError=''" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">Cancel</button>
-                    <button @click="saveEditAdapter()" class="px-4 py-2 bg-qci-accent text-white text-sm rounded-lg hover:bg-blue-700">Save Changes</button>
+                    <button @click="showEditAdapter=false; adapterError=''" class="px-4 py-2 text-sm text-[#5B6B82] hover:text-[#0A1628] dark:hover:text-white transition">Cancel</button>
+                    <button @click="saveEditAdapter()" class="px-5 py-2.5 bg-[#071B2F] text-white text-sm font-medium rounded-lg hover:bg-[#0D2F52] transition">Save Changes</button>
                 </div>
             </div>
         </div>
 
-        <div x-show="showAddAdapter" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" @click.self="showAddAdapter=false">
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
-                <h3 class="text-lg font-semibold dark:text-white mb-4">Add Portal Adapter</h3>
+        <div x-show="showAddAdapter" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" @click.self="showAddAdapter=false">
+            <div class="bg-white dark:bg-[#0F2337] rounded-2xl shadow-2xl p-7 w-full max-w-lg max-h-[90vh] overflow-y-auto border border-[#DDE3EC] dark:border-[#1A3352]">
+                <h3 class="text-lg font-bold text-[#0A1628] dark:text-white mb-5">Add Portal Adapter</h3>
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Portal ID</label>
+                        <label class="block text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-1.5">Portal ID</label>
                         <input x-model="newAdapter.portal_id" type="text" placeholder="e.g. nabl-portal-v2"
-                               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                               class="w-full border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-[#0A1628] text-[#0A1628] dark:text-white focus:ring-2 focus:ring-[#1A6BBF] outline-none transition">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Role Map (JSON)</label>
+                        <label class="block text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-1.5">Role Map (JSON)</label>
                         <textarea x-model="newAdapter.role_map_json" rows="3" placeholder='{"101": "ROLE_LEAD"}'
-                                  class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm font-mono bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"></textarea>
+                                  class="w-full border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-3 py-2.5 text-sm font-mono bg-white dark:bg-[#0A1628] text-[#0A1628] dark:text-white focus:ring-2 focus:ring-[#1A6BBF] outline-none transition"></textarea>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Event Map (JSON)</label>
+                        <label class="block text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-1.5">Event Map (JSON)</label>
                         <textarea x-model="newAdapter.event_map_json" rows="3" placeholder='{"assessment_done": "ASSESSMENT_COMPLETE"}'
-                                  class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm font-mono bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"></textarea>
+                                  class="w-full border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-3 py-2.5 text-sm font-mono bg-white dark:bg-[#0A1628] text-[#0A1628] dark:text-white focus:ring-2 focus:ring-[#1A6BBF] outline-none transition"></textarea>
                     </div>
-                    <span x-show="adapterError" class="text-red-500 dark:text-red-400 text-xs" x-text="adapterError"></span>
+                    <span x-show="adapterError" class="text-red-500 text-xs" x-text="adapterError"></span>
                 </div>
                 <div class="mt-6 flex justify-end space-x-3">
-                    <button @click="showAddAdapter=false;adapterError=''" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">Cancel</button>
-                    <button @click="addAdapter()" class="px-4 py-2 bg-qci-accent text-white text-sm rounded-lg hover:bg-blue-700">Add Adapter</button>
+                    <button @click="showAddAdapter=false;adapterError=''" class="px-4 py-2 text-sm text-[#5B6B82] hover:text-[#0A1628] dark:hover:text-white transition">Cancel</button>
+                    <button @click="addAdapter()" class="px-5 py-2.5 bg-[#071B2F] text-white text-sm font-medium rounded-lg hover:bg-[#0D2F52] transition">Add Adapter</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- AUDIT LOG -->
+    <!-- ================================================================== -->
+    <!-- AUDIT LOG TAB                                                       -->
+    <!-- ================================================================== -->
     <div x-show="activeTab === 'Audit Log'">
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-            <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
-                <h2 class="text-lg font-semibold dark:text-white">Integration Audit Log</h2>
+        <div class="bg-white dark:bg-[#0F2337] rounded-xl border border-[#DDE3EC] dark:border-[#1A3352] shadow-sm overflow-hidden">
+            <div class="px-6 py-4 bg-[#F8FAFC] dark:bg-[#0A1628] border-b border-[#DDE3EC] dark:border-[#1A3352] flex flex-wrap justify-between items-center gap-3">
+                <h2 class="text-sm font-semibold text-[#0A1628] dark:text-white">Integration Audit Log</h2>
                 <div class="flex items-center space-x-2">
                     <select x-model="logFilter" @change="loadAuditLogs()"
-                            class="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                            class="border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-[#0F2337] text-[#0A1628] dark:text-white focus:ring-2 focus:ring-[#1A6BBF] outline-none transition">
                         <option value="">All</option><option value="INBOUND">Inbound</option><option value="OUTBOUND">Outbound</option>
                     </select>
                     <button @click="loadAuditLogs()"
-                            class="px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-sm rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">
+                            class="px-3 py-1.5 border border-[#DDE3EC] dark:border-[#1A3352] text-sm rounded-lg hover:bg-[#F4F6F9] dark:hover:bg-[#0A1628] text-[#5B6B82] transition">
                         Refresh
                     </button>
                 </div>
@@ -915,31 +935,33 @@
             <div class="overflow-x-auto">
                 <table class="min-w-full text-sm">
                     <thead>
-                        <tr class="bg-gray-50 dark:bg-gray-700 text-left">
-                            <th class="px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Time</th>
-                            <th class="px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Direction</th>
-                            <th class="px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Event</th>
-                            <th class="px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Portal</th>
-                            <th class="px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Status</th>
+                        <tr class="bg-[#F8FAFC] dark:bg-[#0A1628] text-left">
+                            <th class="px-5 py-3 text-xs font-semibold text-[#5B6B82] uppercase tracking-wider">Time</th>
+                            <th class="px-5 py-3 text-xs font-semibold text-[#5B6B82] uppercase tracking-wider">Direction</th>
+                            <th class="px-5 py-3 text-xs font-semibold text-[#5B6B82] uppercase tracking-wider">Event</th>
+                            <th class="px-5 py-3 text-xs font-semibold text-[#5B6B82] uppercase tracking-wider">Portal</th>
+                            <th class="px-5 py-3 text-xs font-semibold text-[#5B6B82] uppercase tracking-wider">Status</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                    <tbody>
                         <template x-for="log in auditLogs" :key="log.id">
-                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
-                                <td class="px-4 py-3 text-gray-400 dark:text-gray-500 text-xs" x-text="fmtDate(log.created_at)"></td>
-                                <td class="px-4 py-3">
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
-                                          :class="log.direction==='INBOUND' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300'"
+                            <tr class="border-b border-[#EEF2F7] dark:border-[#1A3352] hover:bg-[#F8FAFC] dark:hover:bg-[#0A1628] transition">
+                                <td class="px-5 py-3 text-[#5B6B82] text-xs" x-text="fmtDate(log.created_at)"></td>
+                                <td class="px-5 py-3">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+                                          :class="log.direction==='INBOUND'
+                                              ? 'bg-blue-100 text-[#1A6BBF] dark:bg-blue-900/40 dark:text-blue-300'
+                                              : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'"
                                           x-text="log.direction"></span>
                                 </td>
-                                <td class="px-4 py-3"><code class="text-xs bg-gray-100 dark:bg-gray-700 dark:text-gray-300 px-1.5 py-0.5 rounded" x-text="log.event_type||'—'"></code></td>
-                                <td class="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs truncate max-w-[160px]" x-text="log.portal_id||'—'"></td>
-                                <td class="px-4 py-3">
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                                <td class="px-5 py-3"><code class="text-xs bg-[#F8FAFC] dark:bg-[#0A1628] text-[#5B6B82] px-1.5 py-0.5 rounded" x-text="log.event_type||'—'"></code></td>
+                                <td class="px-5 py-3 text-[#5B6B82] text-xs truncate max-w-[160px]" x-text="log.portal_id||'—'"></td>
+                                <td class="px-5 py-3">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
                                           :class="{
-                                              'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300': log.status==='processed'||log.status==='dispatched',
-                                              'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300': log.status==='failed',
-                                              'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300': log.status==='received'
+                                              'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400': log.status==='processed'||log.status==='dispatched',
+                                              'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400': log.status==='failed',
+                                              'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400': log.status==='received'
                                           }"
                                           x-text="log.status"></span>
                                 </td>
@@ -948,20 +970,26 @@
                     </tbody>
                 </table>
             </div>
-            <div x-show="auditLogs.length===0" class="text-center py-8 text-gray-400 dark:text-gray-500 text-sm">No log entries yet.</div>
+            <div x-show="auditLogs.length===0" class="text-center py-12 text-[#5B6B82] text-sm">No log entries yet.</div>
         </div>
     </div>
 
-    <!-- BOARD CONFIG (sys admin only) -->
+    <!-- ================================================================== -->
+    <!-- BOARD CONFIG TAB (sys admin only)                                   -->
+    <!-- ================================================================== -->
     <div x-show="activeTab === 'Board Config'">
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-            <h2 class="text-lg font-semibold dark:text-white mb-2">Board Profile JSON</h2>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Controls rating engine, star bands, stakeholder weights, and terminology.</p>
-            <textarea x-model="configJson" rows="20"
-                      class="w-full font-mono text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 bg-gray-50 dark:bg-gray-700 dark:text-gray-100 focus:ring-2 focus:ring-qci-accent focus:border-transparent"></textarea>
-            <div class="mt-4 flex items-center justify-between flex-wrap gap-3">
-                <span x-show="configError" class="text-red-500 dark:text-red-400 text-sm" x-text="configError"></span>
-                <button @click="saveConfig()" class="px-6 py-2 bg-qci-accent text-white text-sm font-medium rounded-lg hover:bg-blue-700">Save Configuration</button>
+        <div class="bg-white dark:bg-[#0F2337] rounded-xl border border-[#DDE3EC] dark:border-[#1A3352] shadow-sm overflow-hidden">
+            <div class="px-6 py-4 bg-[#F8FAFC] dark:bg-[#0A1628] border-b border-[#DDE3EC] dark:border-[#1A3352]">
+                <h2 class="text-sm font-semibold text-[#0A1628] dark:text-white">Board Profile JSON</h2>
+                <p class="text-xs text-[#5B6B82] mt-0.5">Controls rating engine, star bands, stakeholder weights, and terminology.</p>
+            </div>
+            <div class="p-6">
+                <textarea x-model="configJson" rows="20"
+                          class="w-full font-mono text-sm border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-4 py-3 bg-[#F8FAFC] dark:bg-[#0A1628] text-[#0A1628] dark:text-white focus:ring-2 focus:ring-[#1A6BBF] focus:border-transparent outline-none transition"></textarea>
+                <div class="mt-4 flex items-center justify-between flex-wrap gap-3">
+                    <span x-show="configError" class="text-red-500 text-sm" x-text="configError"></span>
+                    <button @click="saveConfig()" class="px-5 py-2.5 bg-[#071B2F] text-white text-sm font-medium rounded-lg hover:bg-[#0D2F52] transition">Save Configuration</button>
+                </div>
             </div>
         </div>
     </div>
@@ -1215,7 +1243,7 @@ function boardAdmin(boardCode) {
             return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
         },
         boardColor(code) {
-            return { NABL: 'bg-blue-600', NABH: 'bg-emerald-600', NABCB: 'bg-orange-600', NABET: 'bg-purple-600' }[code] || 'bg-gray-600';
+            return { NABL: 'bg-blue-700', NABH: 'bg-emerald-700', NABCB: 'bg-orange-600', NABET: 'bg-violet-700' }[code] || 'bg-gray-600';
         },
     };
 }
