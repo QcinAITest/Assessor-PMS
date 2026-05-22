@@ -48,8 +48,7 @@ class Program(Base):
                               nullable=True)
     board_id = Column(String(36), ForeignKey("boards.id"), nullable=False)
     code = Column(String(50), nullable=True)
-    # Mapped to "programme_name" column for cross-app compatibility with qci_notifications
-    name = Column("programme_name", String(300), nullable=False)
+    name = Column("name", String(300), nullable=False)
     description = Column(Text)
     standard_version = Column(String(200), nullable=True,
                                doc="e.g. 'ISO/IEC 17025:2017'")
