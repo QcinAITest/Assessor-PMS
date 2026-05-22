@@ -66,7 +66,7 @@ async def get_current_user(
 
 
 async def require_system_admin(user: User = Depends(get_current_user)) -> User:
-    if user.role != "super_admin":
+    if user.role not in ("SYSTEM_ADMIN", "super_admin"):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "System admin access required")
     return user
 
@@ -77,7 +77,7 @@ async def require_board_access(
     db: Session = Depends(get_db),
 ) -> User:
     """Board admin can only access their own board; system admin can access any."""
-    if user.role == "super_admin":
+    if user.role in ("SYSTEM_ADMIN", "super_admin"):
         return user
     # Resolve code → ID
     board = db.query(Board).filter(

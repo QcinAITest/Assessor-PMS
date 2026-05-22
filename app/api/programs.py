@@ -40,6 +40,19 @@ class ProgramCreate(BaseModel):
     sort_order: int = 0
 
 
+class ServiceLineUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    sort_order: Optional[int] = None
+
+
+class ProgramUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    standard_version: Optional[str] = None
+    sort_order: Optional[int] = None
+
+
 # --------------------------------------------------------------------------- #
 # Helpers                                                                      #
 # --------------------------------------------------------------------------- #
@@ -54,7 +67,7 @@ def _get_board(db: Session, board_id: str) -> Board:
 
 
 def _check_board_access(user: User, board: Board):
-    if user.role == "super_admin":
+    if user.role in ("SYSTEM_ADMIN", "super_admin"):
         return
     if user.board_id != board.id:
         raise HTTPException(403, "Access denied for this board")
@@ -90,6 +103,28 @@ def create_service_line(
     _check_board_access(current_user, board)
     sl = ServiceLine(id=str(uuid.uuid4()), board_id=board.id, **data.dict())
     db.add(sl)
+    db.commit()
+    db.refresh(sl)
+    return _sl_dict(sl)
+
+
+@router.put("/service-lines/{sl_id}")
+def update_service_line(
+    board_id: str,
+    sl_id: str,
+    data: ServiceLineUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    board = _get_board(db, board_id)
+    _check_board_access(current_user, board)
+    sl = db.query(ServiceLine).filter(
+        ServiceLine.id == sl_id, ServiceLine.board_id == board.id
+    ).first()
+    if not sl:
+        raise HTTPException(404, "Service line not found")
+    for field, value in data.dict(exclude_none=True).items():
+        setattr(sl, field, value)
     db.commit()
     db.refresh(sl)
     return _sl_dict(sl)
@@ -158,6 +193,31 @@ def create_program(
     db.commit()
     db.refresh(program)
     return _program_dict(program)
+
+
+@router.put("/service-lines/{sl_id}/programs/{program_id}")
+def update_program(
+    board_id: str,
+    sl_id: str,
+    program_id: str,
+    data: ProgramUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    board = _get_board(db, board_id)
+    _check_board_access(current_user, board)
+    prog = db.query(Program).filter(
+        Program.id == program_id,
+        Program.service_line_id == sl_id,
+        Program.board_id == board.id,
+    ).first()
+    if not prog:
+        raise HTTPException(404, "Program not found")
+    for field, value in data.dict(exclude_none=True).items():
+        setattr(prog, field, value)
+    db.commit()
+    db.refresh(prog)
+    return _program_dict(prog)
 
 
 @router.delete("/service-lines/{sl_id}/programs/{program_id}", status_code=204)

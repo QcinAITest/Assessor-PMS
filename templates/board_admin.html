@@ -32,6 +32,10 @@
                 <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
                     Window: <span x-text="board.config?.cumulative_window || 10" class="ml-1 font-semibold"></span> audits
                 </span>
+                <a href="/board/{{ board_code }}/scoring"
+                   class="inline-flex items-center px-4 py-1.5 rounded-lg text-xs font-medium bg-qci-accent text-white hover:bg-blue-700 transition">
+                    Assessors &amp; Scoring →
+                </a>
             </div>
         </div>
     </div>
@@ -86,6 +90,8 @@
                                     class="text-qci-accent hover:text-blue-700 text-sm font-medium">
                                 + Add Program
                             </button>
+                            <button @click="openEditSL(sl)"
+                                    class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xs">Edit</button>
                             <button @click="deleteSL(sl.id)"
                                     class="text-red-400 hover:text-red-600 text-xs">Delete</button>
                         </div>
@@ -103,8 +109,12 @@
                                               class="ml-2 text-xs text-gray-400 dark:text-gray-500 font-mono" x-text="prog.standard_version"></span>
                                     </div>
                                 </div>
-                                <button @click="deleteProgram(sl.id, prog.id)"
-                                        class="text-red-400 hover:text-red-600 text-xs">Delete</button>
+                                <div class="flex items-center space-x-3">
+                                    <button @click="openEditProgram(sl.id, prog)"
+                                            class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xs">Edit</button>
+                                    <button @click="deleteProgram(sl.id, prog.id)"
+                                            class="text-red-400 hover:text-red-600 text-xs">Delete</button>
+                                </div>
                             </div>
                         </template>
                         <div x-show="!sl.programs || sl.programs.length === 0"
@@ -178,6 +188,56 @@
                 <div class="mt-6 flex justify-end space-x-3">
                     <button @click="showAddProgram=false" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">Cancel</button>
                     <button @click="addProgram()" class="px-4 py-2 bg-qci-accent text-white text-sm rounded-lg hover:bg-blue-700">Add</button>
+                </div>
+            </div>
+        </div>
+        <!-- Edit Service Line modal -->
+        <div x-show="showEditSL" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" @click.self="showEditSL=false">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-md">
+                <h3 class="text-lg font-semibold dark:text-white mb-4">Edit Service Line</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name</label>
+                        <input x-model="editSLData.name" type="text"
+                               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description (optional)</label>
+                        <input x-model="editSLData.description" type="text"
+                               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                    </div>
+                </div>
+                <div class="mt-6 flex justify-end space-x-3">
+                    <button @click="showEditSL=false" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">Cancel</button>
+                    <button @click="saveEditSL()" class="px-4 py-2 bg-qci-accent text-white text-sm rounded-lg hover:bg-blue-700">Save</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Program modal -->
+        <div x-show="showEditProgram" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" @click.self="showEditProgram=false">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-md">
+                <h3 class="text-lg font-semibold dark:text-white mb-4">Edit Program</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Program Name</label>
+                        <input x-model="editProgData.name" type="text"
+                               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Standard / Version (optional)</label>
+                        <input x-model="editProgData.standard_version" type="text"
+                               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description (optional)</label>
+                        <input x-model="editProgData.description" type="text"
+                               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                    </div>
+                </div>
+                <div class="mt-6 flex justify-end space-x-3">
+                    <button @click="showEditProgram=false" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">Cancel</button>
+                    <button @click="saveEditProgram()" class="px-4 py-2 bg-qci-accent text-white text-sm rounded-lg hover:bg-blue-700">Save</button>
                 </div>
             </div>
         </div>
@@ -918,6 +978,8 @@ function boardAdmin(boardCode) {
         showAddRole: false, showAddForm: false, showAddFreq: false,
         showAddWebhook: false, showAddAdapter: false, showAddAssessor: false,
         showAddSL: false, showAddProgram: false, addingProgramTo: null,
+        showEditSL: false, editSLId: null, editSLData: {},
+        showEditProgram: false, editProgSLId: null, editProgId: null, editProgData: {},
         showEditRole: false, editRole: {}, editRoleId: null,
         showEditAssessor: false, editAssessor: {}, editAssessorId: null,
         showEditWebhook: false, editWebhook: {}, editWebhookId: null,
@@ -976,6 +1038,27 @@ function boardAdmin(boardCode) {
         },
         async deleteProgram(slId, progId) {
             await api.del('/api/v1/boards/' + this.board.id + '/service-lines/' + slId + '/programs/' + progId);
+            this.serviceLines = await api.get('/api/v1/boards/' + this.board.id + '/service-lines');
+        },
+        openEditSL(sl) {
+            this.editSLId = sl.id;
+            this.editSLData = { name: sl.name, description: sl.description || '' };
+            this.showEditSL = true;
+        },
+        async saveEditSL() {
+            await api.put('/api/v1/boards/' + this.board.id + '/service-lines/' + this.editSLId, this.editSLData);
+            this.showEditSL = false;
+            this.serviceLines = await api.get('/api/v1/boards/' + this.board.id + '/service-lines');
+        },
+        openEditProgram(slId, prog) {
+            this.editProgSLId = slId;
+            this.editProgId = prog.id;
+            this.editProgData = { name: prog.name, description: prog.description || '', standard_version: prog.standard_version || '' };
+            this.showEditProgram = true;
+        },
+        async saveEditProgram() {
+            await api.put('/api/v1/boards/' + this.board.id + '/service-lines/' + this.editProgSLId + '/programs/' + this.editProgId, this.editProgData);
+            this.showEditProgram = false;
             this.serviceLines = await api.get('/api/v1/boards/' + this.board.id + '/service-lines');
         },
 

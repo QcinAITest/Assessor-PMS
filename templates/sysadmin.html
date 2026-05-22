@@ -14,6 +14,11 @@
         </span>
     </div>
 
+    <!-- Init error banner -->
+    <div x-show="initError" class="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-700 rounded-lg text-sm text-red-700 dark:text-red-300">
+        <strong>Error loading data:</strong> <span x-text="initError"></span> — try signing out and back in.
+    </div>
+
     <!-- Tabs -->
     <div class="border-b border-gray-200 dark:border-gray-700 mb-6">
         <nav class="-mb-px flex space-x-8 overflow-x-auto">
@@ -576,9 +581,20 @@ function sysAdminApp() {
             return b ? b.code : '—';
         },
 
+        initError: '',
+
         async init() {
-            this.boards = await api.get('/api/v1/boards');
-            this.users  = await api.get('/api/v1/auth/users');
+            try {
+                const [boards, users] = await Promise.all([
+                    api.get('/api/v1/boards'),
+                    api.get('/api/v1/auth/users'),
+                ]);
+                this.boards = boards || [];
+                this.users  = users  || [];
+            } catch(e) {
+                this.initError = e.message || 'Failed to load dashboard data.';
+                console.error('sysAdminApp init error:', e);
+            }
         },
 
         async createUser() {
