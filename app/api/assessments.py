@@ -5,7 +5,7 @@ import uuid
 
 from app.database import get_db
 from app.models.board import (
-    Board, Assessor, Assessment, FormSubmission, FormTemplate,
+    Board, BoardRole, Assessor, Assessment, FormSubmission, FormTemplate,
     AuditScore, CumulativeRating
 )
 from app.models.auth import User
@@ -152,6 +152,30 @@ def calculate_audit_score(assessment_id: str, evaluee_id: str, db: Session = Dep
     }
 
 
+@router.get("/assessors/{assessor_id}")
+def get_assessor_detail(assessor_id: str, db: Session = Depends(get_db)):
+    """Return assessor profile with board + role label — used by performance card."""
+    assessor = db.query(Assessor).filter(Assessor.id == assessor_id).first()
+    if not assessor:
+        raise HTTPException(404, "Assessor not found")
+    board = db.query(Board).filter(Board.id == assessor.board_id).first()
+    role_label = assessor.role_id
+    if board:
+        role_obj = db.query(BoardRole).filter(
+            BoardRole.board_id == board.id,
+            BoardRole.system_role_id == assessor.role_id,
+        ).first()
+        if role_obj:
+            role_label = role_obj.display_label
+    return {
+        **_assessor_dict(assessor),
+        "board_code": board.code if board else None,
+        "board_name": board.name if board else None,
+        "rating_engine": board.rating_engine if board else "numeric",
+        "role_label": role_label,
+    }
+
+
 @router.get("/assessors/{assessor_id}/cumulative-rating")
 def get_cumulative_rating(assessor_id: str, db: Session = Depends(get_db)):
     assessor = db.query(Assessor).filter(Assessor.id == assessor_id).first()
@@ -175,18 +199,31 @@ def get_cumulative_rating(assessor_id: str, db: Session = Depends(get_db)):
 
 @router.get("/assessors/{assessor_id}/score-history")
 def get_score_history(assessor_id: str, db: Session = Depends(get_db)):
+    """Return last 50 audit scores enriched with assessment context for the performance card."""
     scores = (
         db.query(AuditScore)
         .filter(AuditScore.evaluee_id == assessor_id)
-        .order_by(AuditScore.calculated_at.desc())
+        .order_by(AuditScore.calculated_at.asc())
         .limit(50)
         .all()
     )
-    return [{
-        "id": s.id, "assessment_id": s.assessment_id,
-        "final_score": s.final_score, "star_rating": s.star_rating,
-        "essential_flag": s.essential_flag, "calculated_at": s.calculated_at,
-    } for s in scores]
+    result = []
+    for s in scores:
+        assessment = db.query(Assessment).filter(Assessment.id == s.assessment_id).first()
+        result.append({
+            "id": s.id,
+            "assessment_id": s.assessment_id,
+            "final_score": s.final_score,
+            "base_100_score": s.base_100_score,
+            "star_rating": s.star_rating,
+            "essential_flag": s.essential_flag,
+            "form_scores": s.form_scores,
+            "calculated_at": s.calculated_at,
+            "organization_name": assessment.organization_name if assessment else None,
+            "assessment_type": assessment.assessment_type if assessment else None,
+            "assessment_date": str(assessment.assessment_date)[:10] if assessment and assessment.assessment_date else None,
+        })
+    return result
 
 
 # --- Integration Trigger ---

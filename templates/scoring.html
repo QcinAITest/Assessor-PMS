@@ -268,9 +268,11 @@
                                     <div class="font-medium text-sm text-gray-900 dark:text-white" x-text="a.name"></div>
                                     <div class="text-xs text-gray-500 dark:text-gray-400" x-text="a.employee_id + ' | ' + a.role_id"></div>
                                 </div>
-                                <div class="text-right">
+                                <div class="text-right space-y-0.5">
                                     <div class="text-xs text-gray-400 dark:text-gray-500" x-text="'Audits: ' + a.audit_count"></div>
-                                    <button @click="getCumulative(a.id)" class="text-qci-accent text-xs hover:underline">Rating</button>
+                                    <button @click="getCumulative(a.id)" class="text-qci-accent text-xs hover:underline block">Rating</button>
+                                    <a :href="'/board/' + boardCode + '/assessors/' + a.id"
+                                       class="text-purple-600 dark:text-purple-400 text-xs hover:underline block">Profile →</a>
                                 </div>
                             </div>
                         </div>

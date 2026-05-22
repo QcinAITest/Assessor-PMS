@@ -1,0 +1,357 @@
+{% extends "base.html" %}
+{% block title %}Assessor Profile – QCI PMS{% endblock %}
+
+{% block content %}
+<div x-data="assessorProfileApp('{{ assessor_id }}', '{{ board_code }}')" x-init="init()" x-cloak>
+
+    <!-- Breadcrumb -->
+    <nav class="mb-6 text-sm">
+        <a href="/" class="text-qci-accent hover:underline">Dashboard</a>
+        <span class="mx-2 text-gray-400 dark:text-gray-500">/</span>
+        <a :href="'/board/' + boardCode" class="text-qci-accent hover:underline" x-text="boardCode"></a>
+        <span class="mx-2 text-gray-400 dark:text-gray-500">/</span>
+        <span class="text-gray-700 dark:text-gray-300" x-text="assessor ? assessor.name : 'Assessor Profile'"></span>
+    </nav>
+
+    <!-- Loading -->
+    <div x-show="loading" class="flex items-center justify-center py-20">
+        <div class="text-center">
+            <div class="inline-block w-8 h-8 border-4 border-qci-accent border-t-transparent rounded-full animate-spin mb-3"></div>
+            <p class="text-gray-500 dark:text-gray-400 text-sm">Loading performance data…</p>
+        </div>
+    </div>
+
+    <!-- Error state -->
+    <div x-show="!loading && error" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-6 text-center">
+        <p class="text-red-700 dark:text-red-300 font-medium" x-text="error"></p>
+        <a :href="'/board/' + boardCode" class="mt-3 inline-block text-sm text-qci-accent hover:underline">← Back to board</a>
+    </div>
+
+    <!-- Main content -->
+    <div x-show="!loading && assessor" class="space-y-6">
+
+        <!-- ── Header Card ─────────────────────────────────────────────── -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <div class="flex flex-wrap items-start justify-between gap-4">
+                <div class="flex items-center space-x-4">
+                    <!-- Avatar initials -->
+                    <div class="w-16 h-16 rounded-xl flex items-center justify-center text-white text-xl font-bold flex-shrink-0"
+                         :class="boardColor(boardCode)">
+                        <span x-text="(assessor?.name || '?')[0].toUpperCase()"></span>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900 dark:text-white" x-text="assessor?.name"></h1>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5"
+                           x-text="(assessor?.role_label || assessor?.role_id) + ' · ' + (assessor?.board_name || boardCode)"></p>
+                        <div class="flex flex-wrap items-center gap-2 mt-2">
+                            <span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 font-mono"
+                                  x-text="'EMP: ' + assessor?.employee_id"></span>
+                            <span x-show="assessor?.email"
+                                  class="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+                                  x-text="assessor?.email"></span>
+                            <span class="text-xs px-2 py-0.5 rounded-full font-semibold"
+                                  :class="assessor?.is_active
+                                      ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
+                                      : 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300'"
+                                  x-text="assessor?.is_active ? 'Active' : 'Inactive'"></span>
+                        </div>
+                    </div>
+                </div>
+                <!-- Audit count pill -->
+                <div class="text-center bg-qci-accent bg-opacity-10 dark:bg-blue-900/30 rounded-xl px-6 py-3 border border-blue-200 dark:border-blue-800">
+                    <div class="text-3xl font-bold text-qci-accent" x-text="assessor?.audit_count ?? '—'"></div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Total Audits</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Summary Row: Cumulative Rating + Essential Flags ─────────── -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <!-- Cumulative Score -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 text-center">
+                <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Cumulative Score</p>
+                <div class="text-4xl font-bold text-gray-900 dark:text-white"
+                     x-text="cumulative ? cumulative.cumulative_score.toFixed(2) : '—'"></div>
+                <div class="mt-2" x-html="cumulative ? starHtml(cumulative.star_rating) : '—'"></div>
+                <p class="text-xs text-gray-400 dark:text-gray-500 mt-1"
+                   x-text="cumulative ? 'Over last ' + cumulative.window_size + ' audit(s)' : 'No data yet'"></p>
+            </div>
+
+            <!-- Latest Score -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 text-center">
+                <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Latest Score</p>
+                <div class="text-4xl font-bold"
+                     :class="latestScore ? scoreColor(latestScore.final_score) : 'text-gray-400 dark:text-gray-600'"
+                     x-text="latestScore ? latestScore.final_score.toFixed(2) : '—'"></div>
+                <div class="mt-2" x-html="latestScore ? starHtml(latestScore.star_rating) : '—'"></div>
+                <p class="text-xs text-gray-400 dark:text-gray-500 mt-1"
+                   x-text="latestScore ? latestScore.assessment_date || '' : 'No audits yet'"></p>
+            </div>
+
+            <!-- Essential Flags -->
+            <div class="rounded-xl shadow-sm border p-5 text-center"
+                 :class="cumulative?.has_essential_flags
+                     ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                     : 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'">
+                <p class="text-xs font-medium uppercase tracking-wide mb-2"
+                   :class="cumulative?.has_essential_flags ? 'text-red-500 dark:text-red-400' : 'text-green-600 dark:text-green-400'">
+                    Essential Criteria
+                </p>
+                <div class="text-4xl" x-text="cumulative?.has_essential_flags ? '⚠️' : '✅'"></div>
+                <p class="text-xs mt-2"
+                   :class="cumulative?.has_essential_flags ? 'text-red-700 dark:text-red-300' : 'text-green-700 dark:text-green-300'"
+                   x-text="cumulative?.has_essential_flags
+                       ? flagCount + ' flag(s) in window'
+                       : 'All clear in window'">
+                </p>
+            </div>
+        </div>
+
+        <!-- ── Score Trend Chart ──────────────────────────────────────── -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-base font-semibold text-gray-900 dark:text-white">Score Trend</h2>
+                <span class="text-xs text-gray-400 dark:text-gray-500" x-text="scoreHistory.length + ' audit(s) shown'"></span>
+            </div>
+            <div x-show="scoreHistory.length === 0" class="flex items-center justify-center h-48 text-gray-400 dark:text-gray-500 text-sm">
+                No audit scores recorded yet.
+            </div>
+            <div x-show="scoreHistory.length > 0">
+                <canvas id="scoreTrendChart" height="100"></canvas>
+            </div>
+        </div>
+
+        <!-- ── Score History Table ───────────────────────────────────── -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <h2 class="text-base font-semibold text-gray-900 dark:text-white mb-4">Audit History</h2>
+
+            <div x-show="scoreHistory.length === 0" class="text-center py-8 text-gray-400 dark:text-gray-500 text-sm">
+                No audit records found.
+            </div>
+
+            <div x-show="scoreHistory.length > 0" class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                    <thead>
+                        <tr class="bg-gray-50 dark:bg-gray-700 text-left">
+                            <th class="px-4 py-3 font-medium text-gray-600 dark:text-gray-300">#</th>
+                            <th class="px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Date</th>
+                            <th class="px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Organization</th>
+                            <th class="px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Type</th>
+                            <th class="px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Score</th>
+                            <th class="px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Stars</th>
+                            <th class="px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Essential</th>
+                            <th class="px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Form Breakdown</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                        <!-- Reversed so newest is at top in the table -->
+                        <template x-for="(s, idx) in [...scoreHistory].reverse()" :key="s.id">
+                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                                <td class="px-4 py-3 text-gray-400 dark:text-gray-500 text-xs font-mono"
+                                    x-text="scoreHistory.length - idx"></td>
+                                <td class="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap"
+                                    x-text="s.assessment_date || fmtDate(s.calculated_at)"></td>
+                                <td class="px-4 py-3 text-gray-800 dark:text-gray-200 max-w-[180px] truncate"
+                                    :title="s.organization_name || '—'"
+                                    x-text="s.organization_name || '—'"></td>
+                                <td class="px-4 py-3">
+                                    <span class="px-2 py-0.5 rounded text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"
+                                          x-text="s.assessment_type || '—'"></span>
+                                </td>
+                                <td class="px-4 py-3">
+                                    <span class="text-base font-bold"
+                                          :class="scoreColor(s.final_score)"
+                                          x-text="s.final_score.toFixed(2)"></span>
+                                </td>
+                                <td class="px-4 py-3" x-html="starHtml(s.star_rating)"></td>
+                                <td class="px-4 py-3">
+                                    <span x-show="s.essential_flag"
+                                          class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300">
+                                        FLAGGED
+                                    </span>
+                                    <span x-show="!s.essential_flag"
+                                          class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300">
+                                        OK
+                                    </span>
+                                </td>
+                                <!-- Form scores breakdown (collapsible inline) -->
+                                <td class="px-4 py-3">
+                                    <div x-show="s.form_scores && Object.keys(s.form_scores).length > 0"
+                                         class="space-y-0.5">
+                                        <template x-for="[code, data] in Object.entries(s.form_scores || {})" :key="code">
+                                            <div class="flex items-center space-x-1 text-xs">
+                                                <span class="font-mono text-gray-500 dark:text-gray-400 w-16 truncate" x-text="code"></span>
+                                                <span class="text-gray-400 dark:text-gray-500">→</span>
+                                                <span class="font-semibold text-gray-700 dark:text-gray-300"
+                                                      x-text="data.score?.toFixed(2)"></span>
+                                                <span class="text-gray-400 dark:text-gray-500 text-xs"
+                                                      x-text="'×' + Math.round((data.weight||0)*100) + '%'"></span>
+                                            </div>
+                                        </template>
+                                    </div>
+                                    <span x-show="!s.form_scores || Object.keys(s.form_scores).length === 0"
+                                          class="text-gray-300 dark:text-gray-600 text-xs">—</span>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ── Back link ─────────────────────────────────────────────── -->
+        <div class="text-center pb-4">
+            <a :href="'/board/' + boardCode + '/scoring'"
+               class="text-sm text-qci-accent hover:underline">
+                ← Back to Scoring Dashboard
+            </a>
+        </div>
+
+    </div><!-- /main content -->
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<script>
+function assessorProfileApp(assessorId, boardCode) {
+    return {
+        assessorId,
+        boardCode,
+        assessor: null,
+        cumulative: null,
+        scoreHistory: [],
+        loading: true,
+        error: null,
+        chart: null,
+
+        get latestScore() {
+            return this.scoreHistory.length > 0
+                ? this.scoreHistory[this.scoreHistory.length - 1]
+                : null;
+        },
+
+        get flagCount() {
+            return this.scoreHistory.filter(s => s.essential_flag).length;
+        },
+
+        async init() {
+            try {
+                // Parallel fetch of assessor detail + cumulative + history
+                const [assessorData, cumulativeData, historyData] = await Promise.all([
+                    api.get('/api/v1/assessors/' + this.assessorId),
+                    api.get('/api/v1/assessors/' + this.assessorId + '/cumulative-rating'),
+                    api.get('/api/v1/assessors/' + this.assessorId + '/score-history'),
+                ]);
+                this.assessor   = assessorData;
+                this.cumulative = cumulativeData?.cumulative_score !== undefined ? cumulativeData : null;
+                this.scoreHistory = historyData || [];
+            } catch (e) {
+                this.error = e.message || 'Failed to load assessor data.';
+            } finally {
+                this.loading = false;
+            }
+
+            // Build chart after Alpine renders the canvas
+            if (this.scoreHistory.length > 0) {
+                this.$nextTick(() => this.buildChart());
+            }
+        },
+
+        buildChart() {
+            const isDark = document.documentElement.classList.contains('dark');
+            const canvas = document.getElementById('scoreTrendChart');
+            if (!canvas) return;
+            if (this.chart) this.chart.destroy();
+
+            const labels = this.scoreHistory.map((s, i) => {
+                const d = s.assessment_date || s.calculated_at?.slice(0, 10);
+                return d ? d : `Audit ${i + 1}`;
+            });
+            const scores = this.scoreHistory.map(s => s.final_score);
+            const flagged = this.scoreHistory.map(s => s.essential_flag);
+
+            const gridColor  = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+            const textColor  = isDark ? '#9ca3af' : '#6b7280';
+            const lineColor  = '#2563eb';
+            const areaColor  = isDark ? 'rgba(37,99,235,0.15)' : 'rgba(37,99,235,0.08)';
+            const pointColor = flagged.map(f => f ? '#ef4444' : '#2563eb');
+
+            this.chart = new Chart(canvas.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'Audit Score',
+                        data: scores,
+                        borderColor: lineColor,
+                        backgroundColor: areaColor,
+                        borderWidth: 2,
+                        pointBackgroundColor: pointColor,
+                        pointBorderColor: pointColor,
+                        pointRadius: 5,
+                        pointHoverRadius: 7,
+                        fill: true,
+                        tension: 0.35,
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label(ctx) {
+                                    const s = this.scoreHistory?.[ctx.dataIndex];
+                                    const flag = s?.essential_flag ? ' ⚠ FLAGGED' : '';
+                                    const org  = s?.organization_name ? ` — ${s.organization_name}` : '';
+                                    return `Score: ${ctx.raw.toFixed(2)}${flag}${org}`;
+                                }.bind(this),
+                            },
+                        },
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: textColor, maxRotation: 45, font: { size: 11 } },
+                            grid: { color: gridColor },
+                        },
+                        y: {
+                            min: 0,
+                            max: this.assessor?.rating_engine === 'percentage' ? 100 : 5.5,
+                            ticks: { color: textColor, font: { size: 11 } },
+                            grid: { color: gridColor },
+                        },
+                    },
+                },
+            });
+        },
+
+        scoreColor(score) {
+            if (score === null || score === undefined) return 'text-gray-400 dark:text-gray-600';
+            const pct = this.assessor?.rating_engine === 'percentage'
+                ? score
+                : ((score - 1) / 4) * 100;
+            if (pct >= 80) return 'text-green-600 dark:text-green-400';
+            if (pct >= 60) return 'text-yellow-600 dark:text-yellow-400';
+            return 'text-red-600 dark:text-red-400';
+        },
+
+        boardColor(code) {
+            return {
+                NABL: 'bg-blue-600',
+                NABH: 'bg-emerald-600',
+                NABCB: 'bg-orange-600',
+                NABET: 'bg-purple-600',
+            }[code] || 'bg-gray-600';
+        },
+
+        fmtDate(iso) {
+            if (!iso) return '—';
+            return new Date(iso).toLocaleDateString();
+        },
+    };
+}
+</script>
+{% endblock %}

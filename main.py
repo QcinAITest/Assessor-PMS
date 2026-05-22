@@ -79,6 +79,14 @@ async def scoring_dashboard(request: Request, board_code: str):
     })
 
 
+@app.get("/board/{board_code}/assessors/{assessor_id}", response_class=HTMLResponse)
+async def assessor_profile(request: Request, board_code: str, assessor_id: str):
+    """Performance card — longitudinal score history for a single assessor."""
+    return templates.TemplateResponse("assessor_profile.html", {
+        "request": request, "board_code": board_code, "assessor_id": assessor_id
+    })
+
+
 @app.get("/forms/{token}", response_class=HTMLResponse)
 async def public_form_page(request: Request, token: str):
     """Public, no-auth form fill page — sent as a link to assessors."""

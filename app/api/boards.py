@@ -6,7 +6,7 @@ import uuid
 from app.database import get_db
 from app.models.board import (
     Board, BoardRole, FormTemplate, Parameter, EssentialCriterion,
-    FrequencyRule, Webhook, FormSubmission, log_config_change
+    FrequencyRule, Webhook, FormSubmission, Assessor, Assessment, log_config_change
 )
 from app.models.auth import User
 from app.schemas.requests import (
@@ -57,6 +57,47 @@ def get_board(
 ):
     board = _get_board(db, board_id)
     return _board_detail(db, board)
+
+
+@router.delete("/{board_id}")
+def delete_board(
+    board_id: str,
+    _: User = Depends(require_system_admin),
+    db: Session = Depends(get_db),
+):
+    """Soft-delete a board (sets is_active=False). Blocked if the board has active assessors
+    or open assessments to prevent orphaning live data."""
+    board = _get_board(db, board_id)
+    active_assessors = (
+        db.query(Assessor)
+        .filter(Assessor.board_id == board.id, Assessor.is_active == True)  # noqa: E712
+        .count()
+    )
+    if active_assessors > 0:
+        raise HTTPException(
+            409,
+            f"Cannot deactivate '{board.code}' — {active_assessors} active assessor(s) still assigned. "
+            "Deactivate all assessors first, or reassign them."
+        )
+    open_assessments = (
+        db.query(Assessment)
+        .filter(
+            Assessment.board_id == board.id,
+            Assessment.status.in_(["IN_PROGRESS", "PENDING_FEEDBACK"]),
+        )
+        .count()
+    )
+    if open_assessments > 0:
+        raise HTTPException(
+            409,
+            f"Cannot deactivate '{board.code}' — {open_assessments} assessment(s) are still open. "
+            "Close or cancel them first."
+        )
+    board.is_active = False
+    log_config_change(db, board.id, "BOARD_DEACTIVATED", "board", board.id,
+                      {"code": board.code, "name": board.name})
+    db.commit()
+    return {"deactivated": True, "id": board.id, "code": board.code}
 
 
 @router.put("/{board_id}")
