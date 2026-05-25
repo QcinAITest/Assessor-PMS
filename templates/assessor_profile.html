@@ -243,7 +243,8 @@ function assessorProfileApp(assessorId, boardCode) {
         scoreHistory: [],
         loading: true,
         error: null,
-        chart: null,
+        // NOTE: chart instance is stored on the canvas DOM element (_chartInst)
+        // NOT here, because Alpine's Proxy wrapping causes infinite recursion in Chart.js
 
         get latestScore() {
             return this.scoreHistory.length > 0
@@ -279,10 +280,12 @@ function assessorProfileApp(assessorId, boardCode) {
         },
 
         buildChart() {
+            const self = this;   // capture for Chart.js callbacks
             const isDark = document.documentElement.classList.contains('dark');
             const canvas = document.getElementById('scoreTrendChart');
             if (!canvas) return;
-            if (this.chart) this.chart.destroy();
+            // Destroy previous instance stored on the DOM element (avoids Alpine Proxy conflict)
+            if (canvas._chartInst) { canvas._chartInst.destroy(); canvas._chartInst = null; }
 
             const labels = this.scoreHistory.map((s, i) => {
                 const d = s.assessment_date || s.calculated_at?.slice(0, 10);
@@ -297,7 +300,7 @@ function assessorProfileApp(assessorId, boardCode) {
             const areaColor  = isDark ? 'rgba(37,99,235,0.15)' : 'rgba(37,99,235,0.08)';
             const pointColor = flagged.map(f => f ? '#ef4444' : '#2563eb');
 
-            this.chart = new Chart(canvas.getContext('2d'), {
+            canvas._chartInst = new Chart(canvas.getContext('2d'), {
                 type: 'line',
                 data: {
                     labels,
@@ -322,11 +325,11 @@ function assessorProfileApp(assessorId, boardCode) {
                         tooltip: {
                             callbacks: {
                                 label(ctx) {
-                                    const s = this.scoreHistory?.[ctx.dataIndex];
+                                    const s = self.scoreHistory?.[ctx.dataIndex];
                                     const flag = s?.essential_flag ? ' ⚠ FLAGGED' : '';
                                     const org  = s?.organization_name ? ` — ${s.organization_name}` : '';
                                     return `Score: ${ctx.raw.toFixed(2)}${flag}${org}`;
-                                }.bind(this),
+                                },
                             },
                         },
                     },
