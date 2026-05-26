@@ -160,8 +160,9 @@
                                class="w-full border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-[#0A1628] text-[#0A1628] dark:text-white focus:ring-2 focus:ring-[#1A6BBF] outline-none transition">
                     </div>
                 </div>
-                <div class="mt-6 flex justify-end space-x-3">
-                    <button @click="showAddSL=false" class="px-4 py-2 text-sm text-[#5B6B82] hover:text-[#0A1628] dark:hover:text-white transition">Cancel</button>
+                <p x-show="slError" x-text="slError" class="mt-3 text-red-600 dark:text-red-400 text-sm"></p>
+                <div class="mt-4 flex justify-end space-x-3">
+                    <button @click="showAddSL=false; slError=''" class="px-4 py-2 text-sm text-[#5B6B82] hover:text-[#0A1628] dark:hover:text-white transition">Cancel</button>
                     <button @click="addSL()" class="px-5 py-2.5 bg-[#071B2F] text-white text-sm font-medium rounded-lg hover:bg-[#0D2F52] transition">Add</button>
                 </div>
             </div>
@@ -193,8 +194,9 @@
                                class="w-full border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-[#0A1628] text-[#0A1628] dark:text-white focus:ring-2 focus:ring-[#1A6BBF] outline-none transition">
                     </div>
                 </div>
-                <div class="mt-6 flex justify-end space-x-3">
-                    <button @click="showAddProgram=false" class="px-4 py-2 text-sm text-[#5B6B82] hover:text-[#0A1628] dark:hover:text-white transition">Cancel</button>
+                <p x-show="programError" x-text="programError" class="mt-3 text-red-600 dark:text-red-400 text-sm"></p>
+                <div class="mt-4 flex justify-end space-x-3">
+                    <button @click="showAddProgram=false; programError=''" class="px-4 py-2 text-sm text-[#5B6B82] hover:text-[#0A1628] dark:hover:text-white transition">Cancel</button>
                     <button @click="addProgram()" class="px-5 py-2.5 bg-[#071B2F] text-white text-sm font-medium rounded-lg hover:bg-[#0D2F52] transition">Add</button>
                 </div>
             </div>
@@ -216,8 +218,9 @@
                                class="w-full border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-[#0A1628] text-[#0A1628] dark:text-white focus:ring-2 focus:ring-[#1A6BBF] outline-none transition">
                     </div>
                 </div>
-                <div class="mt-6 flex justify-end space-x-3">
-                    <button @click="showEditSL=false" class="px-4 py-2 text-sm text-[#5B6B82] hover:text-[#0A1628] dark:hover:text-white transition">Cancel</button>
+                <p x-show="editSLError" x-text="editSLError" class="mt-3 text-red-600 dark:text-red-400 text-sm"></p>
+                <div class="mt-4 flex justify-end space-x-3">
+                    <button @click="showEditSL=false; editSLError=''" class="px-4 py-2 text-sm text-[#5B6B82] hover:text-[#0A1628] dark:hover:text-white transition">Cancel</button>
                     <button @click="saveEditSL()" class="px-5 py-2.5 bg-[#071B2F] text-white text-sm font-medium rounded-lg hover:bg-[#0D2F52] transition">Save</button>
                 </div>
             </div>
@@ -244,8 +247,9 @@
                                class="w-full border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-[#0A1628] text-[#0A1628] dark:text-white focus:ring-2 focus:ring-[#1A6BBF] outline-none transition">
                     </div>
                 </div>
-                <div class="mt-6 flex justify-end space-x-3">
-                    <button @click="showEditProgram=false" class="px-4 py-2 text-sm text-[#5B6B82] hover:text-[#0A1628] dark:hover:text-white transition">Cancel</button>
+                <p x-show="editProgError" x-text="editProgError" class="mt-3 text-red-600 dark:text-red-400 text-sm"></p>
+                <div class="mt-4 flex justify-end space-x-3">
+                    <button @click="showEditProgram=false; editProgError=''" class="px-4 py-2 text-sm text-[#5B6B82] hover:text-[#0A1628] dark:hover:text-white transition">Cancel</button>
                     <button @click="saveEditProgram()" class="px-5 py-2.5 bg-[#071B2F] text-white text-sm font-medium rounded-lg hover:bg-[#0D2F52] transition">Save</button>
                 </div>
             </div>
@@ -1022,6 +1026,7 @@ function boardAdmin(boardCode) {
         newAssessor: { name: '', employee_id: '', role_id: '', email: '' },
         newSL: { code: '', name: '', description: '' },
         newProgram: { code: '', name: '', standard_version: '', description: '' },
+        slError: '', programError: '', editSLError: '', editProgError: '',
         adapterError: '', configJson: '', configError: '',
         formColors: ['bg-blue-500','bg-emerald-500','bg-orange-500','bg-purple-500','bg-pink-500','bg-teal-500'],
 
@@ -1051,22 +1056,48 @@ function boardAdmin(boardCode) {
         },
 
         async addSL() {
-            await api.post('/api/v1/boards/' + this.board.id + '/service-lines', this.newSL);
-            this.showAddSL = false; this.newSL = { code: '', name: '', description: '' };
-            this.serviceLines = await api.get('/api/v1/boards/' + this.board.id + '/service-lines');
+            this.slError = '';
+            if (!this.newSL.name.trim()) { this.slError = 'Name is required.'; return; }
+            if (!this.newSL.code.trim()) { this.slError = 'Code is required.'; return; }
+            try {
+                await api.post('/api/v1/boards/' + this.board.id + '/service-lines', this.newSL);
+                this.showAddSL = false;
+                this.newSL = { code: '', name: '', description: '' };
+                this.serviceLines = await api.get('/api/v1/boards/' + this.board.id + '/service-lines');
+            } catch(e) {
+                this.slError = e.message || 'Failed to add service line.';
+            }
         },
         async deleteSL(id) {
-            await api.del('/api/v1/boards/' + this.board.id + '/service-lines/' + id);
-            this.serviceLines = await api.get('/api/v1/boards/' + this.board.id + '/service-lines');
+            if (!confirm('Delete this service line and all its programs?')) return;
+            try {
+                await api.del('/api/v1/boards/' + this.board.id + '/service-lines/' + id);
+                this.serviceLines = await api.get('/api/v1/boards/' + this.board.id + '/service-lines');
+            } catch(e) {
+                alert('Delete failed: ' + (e.message || 'Unknown error'));
+            }
         },
         async addProgram() {
-            await api.post('/api/v1/boards/' + this.board.id + '/service-lines/' + this.addingProgramTo + '/programs', this.newProgram);
-            this.showAddProgram = false; this.newProgram = { code: '', name: '', standard_version: '', description: '' };
-            this.serviceLines = await api.get('/api/v1/boards/' + this.board.id + '/service-lines');
+            this.programError = '';
+            if (!this.newProgram.name.trim()) { this.programError = 'Program name is required.'; return; }
+            if (!this.newProgram.code.trim()) { this.programError = 'Code is required.'; return; }
+            try {
+                await api.post('/api/v1/boards/' + this.board.id + '/service-lines/' + this.addingProgramTo + '/programs', this.newProgram);
+                this.showAddProgram = false;
+                this.newProgram = { code: '', name: '', standard_version: '', description: '' };
+                this.serviceLines = await api.get('/api/v1/boards/' + this.board.id + '/service-lines');
+            } catch(e) {
+                this.programError = e.message || 'Failed to add program.';
+            }
         },
         async deleteProgram(slId, progId) {
-            await api.del('/api/v1/boards/' + this.board.id + '/service-lines/' + slId + '/programs/' + progId);
-            this.serviceLines = await api.get('/api/v1/boards/' + this.board.id + '/service-lines');
+            if (!confirm('Delete this program?')) return;
+            try {
+                await api.del('/api/v1/boards/' + this.board.id + '/service-lines/' + slId + '/programs/' + progId);
+                this.serviceLines = await api.get('/api/v1/boards/' + this.board.id + '/service-lines');
+            } catch(e) {
+                alert('Delete failed: ' + (e.message || 'Unknown error'));
+            }
         },
         openEditSL(sl) {
             this.editSLId = sl.id;
@@ -1074,9 +1105,15 @@ function boardAdmin(boardCode) {
             this.showEditSL = true;
         },
         async saveEditSL() {
-            await api.put('/api/v1/boards/' + this.board.id + '/service-lines/' + this.editSLId, this.editSLData);
-            this.showEditSL = false;
-            this.serviceLines = await api.get('/api/v1/boards/' + this.board.id + '/service-lines');
+            this.editSLError = '';
+            if (!this.editSLData.name?.trim()) { this.editSLError = 'Name is required.'; return; }
+            try {
+                await api.put('/api/v1/boards/' + this.board.id + '/service-lines/' + this.editSLId, this.editSLData);
+                this.showEditSL = false;
+                this.serviceLines = await api.get('/api/v1/boards/' + this.board.id + '/service-lines');
+            } catch(e) {
+                this.editSLError = e.message || 'Save failed.';
+            }
         },
         openEditProgram(slId, prog) {
             this.editProgSLId = slId;
@@ -1085,9 +1122,15 @@ function boardAdmin(boardCode) {
             this.showEditProgram = true;
         },
         async saveEditProgram() {
-            await api.put('/api/v1/boards/' + this.board.id + '/service-lines/' + this.editProgSLId + '/programs/' + this.editProgId, this.editProgData);
-            this.showEditProgram = false;
-            this.serviceLines = await api.get('/api/v1/boards/' + this.board.id + '/service-lines');
+            this.editProgError = '';
+            if (!this.editProgData.name?.trim()) { this.editProgError = 'Name is required.'; return; }
+            try {
+                await api.put('/api/v1/boards/' + this.board.id + '/service-lines/' + this.editProgSLId + '/programs/' + this.editProgId, this.editProgData);
+                this.showEditProgram = false;
+                this.serviceLines = await api.get('/api/v1/boards/' + this.board.id + '/service-lines');
+            } catch(e) {
+                this.editProgError = e.message || 'Save failed.';
+            }
         },
 
         openEditAssessor(a) {
