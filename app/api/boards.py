@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
+from datetime import datetime, timedelta
 import uuid
 
 from app.database import get_db
@@ -320,12 +322,27 @@ def get_normalized_weights(board_id: str, form_id: str, _: User = Depends(requir
 
 
 # --- Form Distribution Links ---
+class GenerateLinkBody(BaseModel):
+    evaluator_email: Optional[str] = None
+
+
 @router.post("/{board_id}/forms/{form_id}/generate-link")
-def generate_form_link(board_id: str, form_id: str, _: User = Depends(require_board_access), db: Session = Depends(get_db)):
+def generate_form_link(
+    board_id: str,
+    form_id: str,
+    body: GenerateLinkBody = GenerateLinkBody(),
+    _: User = Depends(require_board_access),
+    db: Session = Depends(get_db),
+):
     """Generate a shareable public link for a form template (creates a CREATED FormSubmission)."""
-    ft = db.query(FormTemplate).filter(FormTemplate.id == form_id, FormTemplate.board_id == board_id).first()
+    board = db.query(Board).filter(
+        (Board.id == board_id) | (Board.code == board_id.upper())
+    ).first()
+    ft = db.query(FormTemplate).filter(FormTemplate.id == form_id).first()
     if not ft:
         raise HTTPException(404, "Form template not found")
+
+    expiry_days = (board.config or {}).get("token_expiry_days", 30) if board else 30
     token = str(uuid.uuid4())
     sub = FormSubmission(
         id=str(uuid.uuid4()),
@@ -336,10 +353,12 @@ def generate_form_link(board_id: str, form_id: str, _: User = Depends(require_bo
         status="CREATED",
         responses={},
         submission_token=token,
+        token_expires_at=datetime.utcnow() + timedelta(days=expiry_days),
+        evaluator_email=body.evaluator_email,
     )
     db.add(sub)
     db.commit()
-    return {"token": token, "url": f"/forms/{token}"}
+    return {"token": token, "url": f"/forms/{token}", "expires_at": sub.token_expires_at}
 
 
 # --- Essential Criteria ---

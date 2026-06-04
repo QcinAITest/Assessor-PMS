@@ -287,6 +287,9 @@ def get_public_form(token: str, db: Session = Depends(get_db)):
     sub = db.query(FormSubmission).filter(FormSubmission.submission_token == token).first()
     if not sub:
         raise HTTPException(404, "Form link not found or expired")
+    # Fix 1: token expiry check (NULL = legacy row, never expires)
+    if sub.token_expires_at and sub.token_expires_at < _dt.utcnow():
+        raise HTTPException(410, "This form link has expired")
     if sub.status in ("SUBMITTED", "COMPLETED", "FLAGGED"):
         return {"already_submitted": True, "status": sub.status}
 
@@ -322,6 +325,9 @@ def submit_public_form(
     sub = db.query(FormSubmission).filter(FormSubmission.submission_token == token).first()
     if not sub:
         raise HTTPException(404, "Form link not found or expired")
+    # Fix 1: token expiry check (NULL = legacy row, never expires)
+    if sub.token_expires_at and sub.token_expires_at < _dt.utcnow():
+        raise HTTPException(410, "This form link has expired")
     if sub.status in ("SUBMITTED", "COMPLETED", "FLAGGED"):
         raise HTTPException(409, "Form already submitted")
 
@@ -329,7 +335,8 @@ def submit_public_form(
     comments = body.get("comments", "")
     ft = sub.form_template
 
-    form_score, essential_flag = calculate_form_score(ft, responses)
+    # Fix 2: use form snapshot if available (preserves original form structure)
+    form_score, essential_flag = calculate_form_score(ft, responses, snapshot=sub.form_snapshot)
 
     sub.responses = responses
     sub.comments = comments

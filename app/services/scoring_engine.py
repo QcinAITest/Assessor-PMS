@@ -63,11 +63,89 @@ def calculate_parameter_score(parameter: Parameter, responses: dict) -> Optional
     return None
 
 
-def calculate_form_score(form_template: FormTemplate, responses: dict) -> Tuple[float, bool]:
+def _calculate_form_score_from_snapshot(snapshot: dict, responses: dict) -> Tuple[float, bool]:
+    """
+    Score a form using a plain-dict snapshot instead of live ORM objects.
+    Used when FormSubmission.form_snapshot is present, ensuring scoring uses
+    the original form structure even if the template has been edited since.
+    """
+    params = snapshot.get("parameters", [])
+
+    # Build a lookup for children
+    children_of: Dict[str, list] = {}
+    for p in params:
+        pid = p.get("parent_id")
+        if pid:
+            children_of.setdefault(pid, []).append(p)
+
+    # Normalize weights of top-level CALCULATED parameters
+    top_level = [p for p in params if p.get("parent_id") is None and p.get("data_type") == "CALCULATED"]
+    raw_sum = sum(p.get("weight", 0) for p in top_level)
+    if raw_sum == 0:
+        n = len(top_level) or 1
+        weight_map = {p["code"]: 1.0 / n for p in top_level}
+    else:
+        weight_map = {p["code"]: p.get("weight", 0) / raw_sum for p in top_level}
+
+    def _score_param(p: dict) -> Optional[float]:
+        dt = p.get("data_type", "RATING_1_5")
+        if dt == "CALCULATED":
+            kids = children_of.get(p["id"], [])
+            child_scores = [_score_param(c) for c in kids]
+            child_scores = [s for s in child_scores if s is not None]
+            return sum(child_scores) / len(child_scores) if child_scores else None
+        value = responses.get(p["code"])
+        if value is None:
+            return None
+        if dt == "RATING_1_5":
+            return float(value)
+        elif dt == "YES_NO":
+            return 5.0 if str(value).upper() == "YES" else 1.0
+        elif dt == "PERCENTAGE":
+            return min(5.0, max(1.0, float(value) / 20.0))
+        elif dt == "DROPDOWN":
+            options = p.get("options") or []
+            if isinstance(options, list) and value in options:
+                return float(options.index(value) + 1) * (5.0 / max(len(options), 1))
+        return None
+
+    weighted_sum = 0.0
+    total_weight_used = 0.0
+    for p in top_level:
+        score = _score_param(p)
+        if score is not None:
+            w = weight_map.get(p["code"], 0)
+            weighted_sum += score * w
+            total_weight_used += w
+
+    form_score = weighted_sum / total_weight_used if total_weight_used > 0 else 0.0
+
+    essential_flag = False
+    for ec in snapshot.get("essential_criteria", []):
+        val = responses.get(ec["code"], "YES")
+        if str(val).upper() == "NO":
+            essential_flag = True
+            break
+
+    return round(form_score, 4), essential_flag
+
+
+def calculate_form_score(
+    form_template: FormTemplate,
+    responses: dict,
+    snapshot: Optional[dict] = None,
+) -> Tuple[float, bool]:
     """
     Compute individual form score = Σ(parameter_score × normalised_weight).
     Returns (score, essential_flag).
+
+    When `snapshot` is provided (FormSubmission.form_snapshot), scoring uses the
+    snapshot structure rather than the live FormTemplate, preserving historical
+    accuracy even if the template has been edited since submission creation.
     """
+    if snapshot:
+        return _calculate_form_score_from_snapshot(snapshot, responses)
+
     weights = normalize_weights(form_template.parameters)
     weighted_sum = 0.0
     total_weight_used = 0.0

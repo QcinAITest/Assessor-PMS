@@ -8,10 +8,11 @@ Integration point: external assessment portals call POST /api/v1/triggers/assess
 which invokes `evaluate_triggers()` to generate pending feedback forms.
 """
 from datetime import datetime, timedelta
-from typing import List
+from typing import List, Optional
 from sqlalchemy.orm import Session
 from app.models.board import (
-    AuditLog, Board, FrequencyRule, Assessor, Assessment, FormSubmission, FormTemplate
+    AuditLog, Board, FrequencyRule, Assessor, Assessment, FormSubmission, FormTemplate,
+    Parameter, EssentialCriterion,
 )
 import uuid
 
@@ -112,15 +113,64 @@ def evaluate_triggers(
     return forms_to_generate
 
 
+def _snapshot_form_template(ft: FormTemplate) -> dict:
+    """
+    Serialize a FormTemplate ORM object to a plain dict for archival.
+    Stored on FormSubmission.form_snapshot at creation time so that
+    scoring uses the original structure even if the template is later edited.
+    """
+    def _param_dict(p: Parameter) -> dict:
+        return {
+            "id": p.id,
+            "code": p.code,
+            "label": p.label,
+            "weight": p.weight,
+            "data_type": p.data_type,
+            "options": p.options,
+            "is_mandatory": p.is_mandatory,
+            "parent_id": p.parent_id,
+            "sort_order": p.sort_order,
+        }
+
+    return {
+        "id": ft.id,
+        "code": ft.code,
+        "name": ft.name,
+        "version": ft.version,
+        "stakeholder_weight": ft.stakeholder_weight,
+        "parameters": [_param_dict(p) for p in ft.parameters],
+        "essential_criteria": [
+            {"id": e.id, "code": e.code, "label": e.label}
+            for e in ft.essential_criteria
+        ],
+    }
+
+
 def create_pending_submissions(
     db: Session,
     assessment: Assessment,
     evaluee: Assessor,
     forms_to_generate: List[dict],
+    board: Optional[Board] = None,
 ) -> List[FormSubmission]:
-    """Create CREATED-status form submissions for each triggered form."""
+    """Create CREATED-status form submissions for each triggered form.
+
+    Args:
+        board: Optional Board object. When provided, token_expiry_days from its
+               config is used to set token_expires_at. Defaults to 30 days.
+    """
+    expiry_days = 30
+    if board is not None:
+        expiry_days = (board.config or {}).get("token_expiry_days", 30)
+    token_expires_at = datetime.utcnow() + timedelta(days=expiry_days)
+
     created = []
     for item in forms_to_generate:
+        ft = db.query(FormTemplate).filter(
+            FormTemplate.id == item["form_template_id"]
+        ).first()
+        snapshot = _snapshot_form_template(ft) if ft else None
+
         submission = FormSubmission(
             id=str(uuid.uuid4()),
             assessment_id=assessment.id,
@@ -130,6 +180,8 @@ def create_pending_submissions(
             status="CREATED",
             responses={},
             submission_token=str(uuid.uuid4()),
+            token_expires_at=token_expires_at,
+            form_snapshot=snapshot,
         )
         db.add(submission)
         created.append(submission)

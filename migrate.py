@@ -133,6 +133,61 @@ def _migrate_postgres():
             cur.execute(f"ALTER TABLE form_submissions ALTER COLUMN {col} DROP NOT NULL")
             print(f"form_submissions.{col} made nullable")
 
+    # --- form_submissions: Fix 1 (token expiry) + Fix 2 (form snapshot) ---
+    cols = columns("form_submissions")
+    if "token_expires_at" not in cols:
+        cur.execute("ALTER TABLE form_submissions ADD COLUMN token_expires_at TIMESTAMP")
+        print("form_submissions.token_expires_at added")
+    if "evaluator_email" not in cols:
+        cur.execute("ALTER TABLE form_submissions ADD COLUMN evaluator_email VARCHAR(300)")
+        print("form_submissions.evaluator_email added")
+    if "form_snapshot" not in cols:
+        cur.execute("ALTER TABLE form_submissions ADD COLUMN form_snapshot JSON")
+        print("form_submissions.form_snapshot added")
+
+    # --- webhooks: Fix 3 (dispatch observability) ---
+    cols = columns("webhooks")
+    if "last_fired_at" not in cols:
+        cur.execute("ALTER TABLE webhooks ADD COLUMN last_fired_at TIMESTAMP")
+        print("webhooks.last_fired_at added")
+    if "last_response_status" not in cols:
+        cur.execute("ALTER TABLE webhooks ADD COLUMN last_response_status INTEGER")
+        print("webhooks.last_response_status added")
+
+    # --- assessors: Fix 6 (composite unique constraint per board) ---
+    # Pre-check: abort if duplicates exist that would violate the new constraint
+    cur.execute("""
+        SELECT employee_id, board_id, COUNT(*)
+        FROM assessors
+        GROUP BY employee_id, board_id
+        HAVING COUNT(*) > 1
+    """)
+    dupes = cur.fetchall()
+    if dupes:
+        print(f"WARNING: Cannot apply assessor deduplication constraint — "
+              f"{len(dupes)} duplicate (employee_id, board_id) pairs found. "
+              f"Resolve duplicates before re-running migration.")
+    else:
+        # Drop old global unique constraint on employee_id
+        cur.execute("""
+            DO $$
+            BEGIN
+                IF EXISTS (
+                    SELECT 1 FROM pg_constraint
+                    WHERE conname = 'assessors_employee_id_key'
+                      AND conrelid = 'assessors'::regclass
+                ) THEN
+                    ALTER TABLE assessors DROP CONSTRAINT assessors_employee_id_key;
+                END IF;
+            END$$;
+        """)
+        # Create composite unique index (idempotent)
+        cur.execute("""
+            CREATE UNIQUE INDEX IF NOT EXISTS uq_assessor_board_employee
+            ON assessors(board_id, employee_id)
+        """)
+        print("assessors: employee_id unique → composite (board_id, employee_id)")
+
     conn.commit()
     cur.close()
     conn.close()
@@ -208,10 +263,16 @@ def _migrate_sqlite():
         cur.execute("ALTER TABLE users ADD COLUMN external_id VARCHAR(100)")
         print("users.external_id added")
 
-    # --- form_submissions: recreate to make FK columns nullable ---
+    # --- form_submissions: recreate to make FK columns nullable (original migration) ---
     cur.execute("SELECT COUNT(*) FROM form_submissions")
     sub_count = cur.fetchone()[0]
-    if sub_count == 0:
+    # Check if the table already has the new columns before deciding to recreate
+    fs_cols = columns("form_submissions")
+    needs_recreation = (
+        "assessment_id" in fs_cols and  # table exists
+        "token_expires_at" not in fs_cols  # new columns missing
+    )
+    if sub_count == 0 and needs_recreation:
         cur.executescript("""
             DROP TABLE IF EXISTS form_submissions_new;
             CREATE TABLE form_submissions_new (
@@ -226,6 +287,9 @@ def _migrate_sqlite():
                 essential_flag    BOOLEAN,
                 comments          TEXT,
                 submission_token  VARCHAR(36)  UNIQUE,
+                token_expires_at  DATETIME,
+                evaluator_email   VARCHAR(300),
+                form_snapshot     JSON,
                 submitted_at      DATETIME,
                 created_at        DATETIME     DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (assessment_id)    REFERENCES assessments(id),
@@ -233,13 +297,76 @@ def _migrate_sqlite():
                 FOREIGN KEY (evaluator_id)     REFERENCES assessors(id),
                 FOREIGN KEY (evaluee_id)       REFERENCES assessors(id)
             );
-            INSERT INTO form_submissions_new SELECT * FROM form_submissions;
+            INSERT INTO form_submissions_new SELECT id, assessment_id, form_template_id, evaluator_id, evaluee_id, status, responses, form_score, essential_flag, comments, submission_token, NULL, NULL, NULL, submitted_at, created_at FROM form_submissions;
             DROP TABLE form_submissions;
             ALTER TABLE form_submissions_new RENAME TO form_submissions;
         """)
-        print("form_submissions recreated with nullable FK columns")
+        print("form_submissions recreated with nullable FK columns + new columns")
     else:
-        print(f"Skipped form_submissions recreation — {sub_count} existing rows present.")
+        # Add new columns incrementally (safe for tables with existing data)
+        fs_cols = columns("form_submissions")
+        if "token_expires_at" not in fs_cols:
+            cur.execute("ALTER TABLE form_submissions ADD COLUMN token_expires_at DATETIME")
+            print("form_submissions.token_expires_at added")
+        if "evaluator_email" not in fs_cols:
+            cur.execute("ALTER TABLE form_submissions ADD COLUMN evaluator_email VARCHAR(300)")
+            print("form_submissions.evaluator_email added")
+        if "form_snapshot" not in fs_cols:
+            cur.execute("ALTER TABLE form_submissions ADD COLUMN form_snapshot JSON")
+            print("form_submissions.form_snapshot added")
+        if sub_count > 0:
+            print(f"form_submissions: {sub_count} existing rows — added new columns in place")
+
+    # --- webhooks: Fix 3 (dispatch observability) ---
+    cols = columns("webhooks")
+    if "last_fired_at" not in cols:
+        cur.execute("ALTER TABLE webhooks ADD COLUMN last_fired_at DATETIME")
+        print("webhooks.last_fired_at added")
+    if "last_response_status" not in cols:
+        cur.execute("ALTER TABLE webhooks ADD COLUMN last_response_status INTEGER")
+        print("webhooks.last_response_status added")
+
+    # --- assessors: Fix 6 (composite unique constraint per board) ---
+    # Pre-check: abort if duplicates exist that would violate the new constraint
+    cur.execute("""
+        SELECT COUNT(*) FROM (
+            SELECT employee_id, board_id
+            FROM assessors
+            GROUP BY employee_id, board_id
+            HAVING COUNT(*) > 1
+        )
+    """)
+    dupe_count = cur.fetchone()[0]
+    if dupe_count > 0:
+        print(f"WARNING: Cannot apply assessor deduplication constraint — "
+              f"{dupe_count} duplicate (employee_id, board_id) pairs found. "
+              f"Resolve duplicates before re-running migration.")
+    else:
+        # Check if the unique constraint already exists by checking if we can recreate safely
+        # SQLite requires table recreation to change constraints
+        a_cols = columns("assessors")
+        cur.executescript("""
+            DROP TABLE IF EXISTS assessors_new;
+            CREATE TABLE assessors_new (
+                id           VARCHAR(36)  NOT NULL PRIMARY KEY,
+                employee_id  VARCHAR(50)  NOT NULL,
+                name         VARCHAR(300) NOT NULL,
+                email        VARCHAR(300),
+                phone        VARCHAR(30),
+                board_id     VARCHAR(36)  NOT NULL REFERENCES boards(id),
+                role_id      VARCHAR(50)  NOT NULL,
+                is_active    BOOLEAN      DEFAULT 1,
+                audit_count  INTEGER      DEFAULT 0,
+                metadata     JSON         DEFAULT '{}',
+                created_at   DATETIME,
+                updated_at   DATETIME,
+                UNIQUE(board_id, employee_id)
+            );
+            INSERT INTO assessors_new SELECT * FROM assessors;
+            DROP TABLE assessors;
+            ALTER TABLE assessors_new RENAME TO assessors;
+        """)
+        print("assessors: recreated with composite UNIQUE(board_id, employee_id)")
 
     conn.commit()
     conn.execute("PRAGMA foreign_keys = ON")

@@ -192,9 +192,9 @@ async def ingest_portal_event(
 
     try:
         if event_type == "ASSESSMENT_COMPLETE":
-            result = _handle_assessment_complete(db, board, translated)
+            result = await _handle_assessment_complete(db, board, translated)
         elif event_type == "SCORE_REQUEST":
-            result = _handle_score_request(db, board, translated)
+            result = await _handle_score_request(db, board, translated)
         else:
             logger.warning(f"[INGEST] Unhandled event_type={event_type} for board={board_code}")
             result = {"message": f"Event '{event_type}' received but no handler registered"}
@@ -212,11 +212,13 @@ async def ingest_portal_event(
         raise HTTPException(500, f"Processing failed: {exc}") from exc
 
 
-def _handle_assessment_complete(db: Session, board: Board, payload: dict) -> dict:
+async def _handle_assessment_complete(db: Session, board: Board, payload: dict) -> dict:
     """
     Handles ASSESSMENT_COMPLETE: evaluates frequency rules and creates
     CREATED-status form submissions for each evaluee.
     """
+    from app.services.webhook_service import fire_webhooks
+
     assessment_id = payload.get("assessment_id")
     evaluee_ids = payload.get("evaluee_ids", [])
 
@@ -236,7 +238,7 @@ def _handle_assessment_complete(db: Session, board: Board, payload: dict) -> dic
 
         increment_audit_count(db, evaluee)
         forms_needed = evaluate_triggers(db, board, assessment, evaluee)
-        created = create_pending_submissions(db, assessment, evaluee, forms_needed)
+        created = create_pending_submissions(db, assessment, evaluee, forms_needed, board=board)
 
         results.append({
             "evaluee_id": eid,
@@ -247,15 +249,23 @@ def _handle_assessment_complete(db: Session, board: Board, payload: dict) -> dic
 
     assessment.status = "PENDING_FEEDBACK"
     db.flush()
+
+    # Fix 3: fire FEEDBACK_DUE webhook
+    await fire_webhooks(db, board.id, "FEEDBACK_DUE", {
+        "assessment_id": assessment_id,
+        "evaluee_count": len([r for r in results if "error" not in r]),
+    })
+
     return {"assessment_id": assessment_id, "evaluees": results}
 
 
-def _handle_score_request(db: Session, board: Board, payload: dict) -> dict:
+async def _handle_score_request(db: Session, board: Board, payload: dict) -> dict:
     """
     Handles SCORE_REQUEST: triggers scoring calculation for an evaluee.
     Delegates to scoring engine via lazy import to avoid circular imports.
     """
     from app.services.scoring_engine import calculate_final_audit_score, calculate_cumulative_rating
+    from app.services.webhook_service import fire_webhooks
 
     assessment_id = payload.get("assessment_id")
     evaluee_id = payload.get("evaluee_id")
@@ -266,6 +276,15 @@ def _handle_score_request(db: Session, board: Board, payload: dict) -> dict:
     audit_score = calculate_final_audit_score(db, assessment_id, evaluee_id, board)
     calculate_cumulative_rating(db, evaluee_id, board)
     db.flush()
+
+    # Fix 3: fire SCORE_CALCULATED webhook
+    await fire_webhooks(db, board.id, "SCORE_CALCULATED", {
+        "assessment_id": assessment_id,
+        "evaluee_id": evaluee_id,
+        "final_score": audit_score.final_score,
+        "star_rating": audit_score.star_rating,
+        "essential_flag": audit_score.essential_flag,
+    })
 
     return {
         "assessment_id": assessment_id,
@@ -445,6 +464,7 @@ def list_audit_logs(
     board_id: str,
     direction: Optional[str] = None,
     status: Optional[str] = None,
+    skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
 ):
@@ -454,8 +474,9 @@ def list_audit_logs(
         q = q.filter(AuditLog.direction == direction.upper())
     if status:
         q = q.filter(AuditLog.status == status.lower())
-    logs = q.order_by(AuditLog.created_at.desc()).limit(limit).all()
-    return [_log_dict(l) for l in logs]
+    total = q.count()
+    logs = q.order_by(AuditLog.created_at.desc()).offset(skip).limit(limit).all()
+    return {"total": total, "skip": skip, "limit": limit, "items": [_log_dict(l) for l in logs]}
 
 
 # --------------------------------------------------------------------------- #

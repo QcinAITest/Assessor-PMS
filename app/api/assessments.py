@@ -1,7 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from datetime import datetime
+from typing import Optional
 import uuid
+
+# ── Assessment status state machine ──────────────────────────────────────────
+VALID_TRANSITIONS = {
+    "IN_PROGRESS":      ["PENDING_FEEDBACK"],
+    "PENDING_FEEDBACK": ["SCORED"],
+    "SCORED":           ["CLOSED"],
+    "CLOSED":           [],
+}
 
 from app.database import get_db
 from app.models.board import (
@@ -26,14 +36,35 @@ router = APIRouter(prefix="/api/v1", tags=["Assessments & Scoring"])
 
 # --- Assessors ---
 @router.get("/boards/{board_id}/assessors")
-def list_assessors(board_id: str, _: User = Depends(require_board_access), db: Session = Depends(get_db)):
-    assessors = db.query(Assessor).filter(Assessor.board_id == board_id).all()
-    return [_assessor_dict(a) for a in assessors]
+def list_assessors(
+    board_id: str,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    is_active: Optional[bool] = Query(None),
+    role_id: Optional[str] = Query(None),
+    _: User = Depends(require_board_access),
+    db: Session = Depends(get_db),
+):
+    q = db.query(Assessor).filter(Assessor.board_id == board_id)
+    if is_active is not None:
+        q = q.filter(Assessor.is_active == is_active)
+    if role_id:
+        q = q.filter(Assessor.role_id == role_id)
+    total = q.count()
+    items = q.order_by(Assessor.name).offset(skip).limit(limit).all()
+    return {"total": total, "skip": skip, "limit": limit, "items": [_assessor_dict(a) for a in items]}
 
 
 @router.post("/boards/{board_id}/assessors")
 def create_assessor(board_id: str, data: AssessorCreate, _: User = Depends(require_board_access), db: Session = Depends(get_db)):
     board = _get_board(db, board_id)
+    # Fix 6: enforce composite uniqueness (board_id, employee_id) at API layer
+    existing = db.query(Assessor).filter(
+        Assessor.board_id == board.id,
+        Assessor.employee_id == data.employee_id,
+    ).first()
+    if existing:
+        raise HTTPException(409, f"Assessor with employee_id '{data.employee_id}' already exists in this board")
     assessor = Assessor(id=str(uuid.uuid4()), board_id=board.id, **data.dict())
     db.add(assessor)
     db.commit()
@@ -69,10 +100,23 @@ def deactivate_assessor(board_id: str, assessor_id: str, _: User = Depends(requi
 
 # --- Assessments ---
 @router.get("/boards/{board_id}/assessments")
-def list_assessments(board_id: str, _: User = Depends(require_board_access), db: Session = Depends(get_db)):
-    items = db.query(Assessment).filter(Assessment.board_id == board_id).order_by(
-        Assessment.assessment_date.desc()).all()
-    return [_assessment_dict(a) for a in items]
+def list_assessments(
+    board_id: str,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    status: Optional[str] = Query(None),
+    assessment_type: Optional[str] = Query(None),
+    _: User = Depends(require_board_access),
+    db: Session = Depends(get_db),
+):
+    q = db.query(Assessment).filter(Assessment.board_id == board_id)
+    if status:
+        q = q.filter(Assessment.status == status)
+    if assessment_type:
+        q = q.filter(Assessment.assessment_type == assessment_type)
+    total = q.count()
+    items = q.order_by(Assessment.assessment_date.desc()).offset(skip).limit(limit).all()
+    return {"total": total, "skip": skip, "limit": limit, "items": [_assessment_dict(a) for a in items]}
 
 
 @router.post("/boards/{board_id}/assessments")
@@ -134,7 +178,8 @@ def list_submissions(assessment_id: str, db: Session = Depends(get_db)):
 
 # --- Scoring ---
 @router.post("/assessments/{assessment_id}/calculate-score")
-def calculate_audit_score(assessment_id: str, evaluee_id: str, db: Session = Depends(get_db)):
+async def calculate_audit_score(assessment_id: str, evaluee_id: str, db: Session = Depends(get_db)):
+    from app.services.webhook_service import fire_webhooks
     assessment = db.query(Assessment).filter(Assessment.id == assessment_id).first()
     if not assessment:
         raise HTTPException(404, "Assessment not found")
@@ -143,12 +188,36 @@ def calculate_audit_score(assessment_id: str, evaluee_id: str, db: Session = Dep
     audit_score = calculate_final_audit_score(db, assessment_id, evaluee_id, board)
     db.commit()
 
+    # Fix 5: transition assessment to SCORED (idempotent — only from PENDING_FEEDBACK)
+    if assessment.status == "PENDING_FEEDBACK":
+        assessment.status = "SCORED"
+        db.commit()
+
+    # Fix 3: fire SCORE_CALCULATED webhook
+    await fire_webhooks(db, board.id, "SCORE_CALCULATED", {
+        "assessment_id": assessment_id,
+        "evaluee_id": evaluee_id,
+        "final_score": audit_score.final_score,
+        "star_rating": audit_score.star_rating,
+        "essential_flag": audit_score.essential_flag,
+    })
+    db.commit()
+
+    # Fix 3: fire ESSENTIAL_FLAGGED webhook if needed
+    if audit_score.essential_flag:
+        await fire_webhooks(db, board.id, "ESSENTIAL_FLAGGED", {
+            "assessment_id": assessment_id,
+            "evaluee_id": evaluee_id,
+        })
+        db.commit()
+
     return {
         "audit_score_id": audit_score.id,
         "final_score": audit_score.final_score,
         "star_rating": audit_score.star_rating,
         "essential_flag": audit_score.essential_flag,
         "form_scores": audit_score.form_scores,
+        "assessment_status": assessment.status,
     }
 
 
@@ -198,15 +267,16 @@ def get_cumulative_rating(assessor_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/assessors/{assessor_id}/score-history")
-def get_score_history(assessor_id: str, db: Session = Depends(get_db)):
-    """Return last 50 audit scores enriched with assessment context for the performance card."""
-    scores = (
-        db.query(AuditScore)
-        .filter(AuditScore.evaluee_id == assessor_id)
-        .order_by(AuditScore.calculated_at.asc())
-        .limit(50)
-        .all()
-    )
+def get_score_history(
+    assessor_id: str,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    db: Session = Depends(get_db),
+):
+    """Return audit scores enriched with assessment context for the performance card."""
+    q = db.query(AuditScore).filter(AuditScore.evaluee_id == assessor_id)
+    total = q.count()
+    scores = q.order_by(AuditScore.calculated_at.asc()).offset(skip).limit(limit).all()
     result = []
     for s in scores:
         assessment = db.query(Assessment).filter(Assessment.id == s.assessment_id).first()
@@ -223,7 +293,7 @@ def get_score_history(assessor_id: str, db: Session = Depends(get_db)):
             "assessment_type": assessment.assessment_type if assessment else None,
             "assessment_date": str(assessment.assessment_date)[:10] if assessment and assessment.assessment_date else None,
         })
-    return result
+    return {"total": total, "skip": skip, "limit": limit, "items": result}
 
 
 # --- Integration Trigger ---
@@ -261,6 +331,49 @@ def trigger_assessment_complete(data: TriggerAssessmentComplete, db: Session = D
     db.commit()
 
     return {"assessment_id": data.assessment_id, "evaluees": results}
+
+
+# --- Assessment Status Transition (Fix 5) ---
+class StatusTransitionBody(BaseModel):
+    new_status: str
+
+
+@router.patch("/boards/{board_id}/assessments/{assessment_id}/status")
+def transition_assessment_status(
+    board_id: str,
+    assessment_id: str,
+    body: StatusTransitionBody,
+    _: User = Depends(require_board_access),
+    db: Session = Depends(get_db),
+):
+    """
+    Manually advance an assessment's status through the state machine.
+    Valid transitions: IN_PROGRESS→PENDING_FEEDBACK, PENDING_FEEDBACK→SCORED, SCORED→CLOSED.
+    PENDING_FEEDBACK→SCORED is normally automatic via calculate-score; this endpoint handles CLOSED.
+    """
+    assessment = db.query(Assessment).filter(
+        Assessment.id == assessment_id,
+        Assessment.board_id == board_id,
+    ).first()
+    if not assessment:
+        raise HTTPException(404, "Assessment not found")
+
+    allowed = VALID_TRANSITIONS.get(assessment.status, [])
+    if body.new_status not in allowed:
+        raise HTTPException(
+            422,
+            f"Cannot transition from '{assessment.status}' to '{body.new_status}'. "
+            f"Allowed next states: {allowed or ['none (terminal state)']}",
+        )
+
+    old_status = assessment.status
+    assessment.status = body.new_status
+    db.commit()
+    return {
+        "assessment_id": assessment_id,
+        "old_status": old_status,
+        "new_status": assessment.status,
+    }
 
 
 # --- Helpers ---

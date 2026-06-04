@@ -174,9 +174,12 @@ class FrequencyRule(Base):
 class Assessor(Base):
     """An assessor/evaluee in the system."""
     __tablename__ = "assessors"
+    __table_args__ = (
+        UniqueConstraint("board_id", "employee_id", name="uq_assessor_board_employee"),
+    )
 
     id = Column(String(36), primary_key=True)
-    employee_id = Column(String(50), unique=True, nullable=False)
+    employee_id = Column(String(50), nullable=False)  # unique per-board via __table_args__
     name = Column(String(300), nullable=False)
     email = Column(String(300))
     phone = Column(String(30))
@@ -229,6 +232,12 @@ class FormSubmission(Base):
     comments = Column(Text)
     submission_token = Column(String(36), unique=True, index=True, nullable=True,
                               doc="Public URL token for Google-Forms-style fill link")
+    token_expires_at = Column(DateTime, nullable=True,
+                              doc="Token expiry time (UTC). NULL = never expires for legacy rows.")
+    evaluator_email = Column(String(300), nullable=True,
+                             doc="Optional: email of intended evaluator for this link")
+    form_snapshot = Column(JSON, nullable=True,
+                           doc="Snapshot of FormTemplate structure at submission creation time")
     submitted_at = Column(DateTime)
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -287,6 +296,8 @@ class Webhook(Base):
     target_url = Column(String(1000), nullable=False)
     secret = Column(String(200))
     is_active = Column(Boolean, default=True)
+    last_fired_at = Column(DateTime, nullable=True, doc="Timestamp of last HTTP dispatch attempt")
+    last_response_status = Column(Integer, nullable=True, doc="HTTP status code of last dispatch")
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

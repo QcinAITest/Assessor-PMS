@@ -41,7 +41,9 @@ class TestAssessorCRUD:
         make_assessor(db, board.id)
         r = client.get(f"/api/v1/boards/{board.id}/assessors", headers=sys_headers(db))
         assert r.status_code == 200
-        assert len(r.json()) == 2
+        data = r.json()
+        assert data["total"] == 2
+        assert len(data["items"]) == 2
 
     def test_update_assessor(self, client, db):
         board = make_board(db)
@@ -67,7 +69,7 @@ class TestAssessorCRUD:
             f"/api/v1/boards/{board.id}/assessors",
             headers=sys_headers(db),
         )
-        assessor_data = next(a for a in r2.json() if a["id"] == assessor.id)
+        assessor_data = next(a for a in r2.json()["items"] if a["id"] == assessor.id)
         assert assessor_data["is_active"] is False
 
     def test_create_assessor_wrong_board_returns_403(self, client, db):
@@ -131,7 +133,9 @@ class TestScoreHistory:
         assessor = make_assessor(db, board.id)
         r = client.get(f"/api/v1/assessors/{assessor.id}/score-history")
         assert r.status_code == 200
-        assert r.json() == []
+        data = r.json()
+        assert data["total"] == 0
+        assert data["items"] == []
 
     def test_history_includes_assessment_context(self, client, db):
         board = make_board(db)
@@ -141,9 +145,9 @@ class TestScoreHistory:
 
         r = client.get(f"/api/v1/assessors/{assessor.id}/score-history")
         assert r.status_code == 200
-        data = r.json()
-        assert len(data) == 1
-        record = data[0]
+        items = r.json()["items"]
+        assert len(items) == 1
+        record = items[0]
         assert record["organization_name"] == "Acme Labs"
         assert record["assessment_type"] == "Initial"
         assert record["final_score"] == 4.2
@@ -157,7 +161,7 @@ class TestScoreHistory:
             self._seed_audit_score(db, assessor.id, board.id, assessment.id, score)
 
         r = client.get(f"/api/v1/assessors/{assessor.id}/score-history")
-        scores = [item["final_score"] for item in r.json()]
+        scores = [item["final_score"] for item in r.json()["items"]]
         assert scores == sorted(scores), "Score history should be ascending (oldest → newest)"
 
     def test_essential_flag_propagated(self, client, db):
@@ -167,7 +171,7 @@ class TestScoreHistory:
         self._seed_audit_score(db, assessor.id, board.id, assessment.id, 2.0, essential=True)
 
         r = client.get(f"/api/v1/assessors/{assessor.id}/score-history")
-        assert r.json()[0]["essential_flag"] is True
+        assert r.json()["items"][0]["essential_flag"] is True
 
     def test_form_scores_included(self, client, db):
         board = make_board(db)
@@ -176,8 +180,8 @@ class TestScoreHistory:
         self._seed_audit_score(db, assessor.id, board.id, assessment.id, 4.0)
 
         r = client.get(f"/api/v1/assessors/{assessor.id}/score-history")
-        assert "form_scores" in r.json()[0]
-        assert "F_TEST" in r.json()[0]["form_scores"]
+        assert "form_scores" in r.json()["items"][0]
+        assert "F_TEST" in r.json()["items"][0]["form_scores"]
 
     def test_history_capped_at_50(self, client, db):
         board = make_board(db)
@@ -187,7 +191,7 @@ class TestScoreHistory:
             self._seed_audit_score(db, assessor.id, board.id, assessment.id, 3.5)
 
         r = client.get(f"/api/v1/assessors/{assessor.id}/score-history")
-        assert len(r.json()) <= 50
+        assert len(r.json()["items"]) <= 50
 
 
 # ── Cumulative Rating ─────────────────────────────────────────────────────────
@@ -286,7 +290,7 @@ class TestScoringPipeline:
         assert calc_r.json()["final_score"] > 0
 
         # Verify history now has one record
-        hist = client.get(f"/api/v1/assessors/{assessor.id}/score-history").json()
+        hist = client.get(f"/api/v1/assessors/{assessor.id}/score-history").json()["items"]
         assert len(hist) == 1
         assert hist[0]["assessment_type"] == "Initial"
         assert hist[0]["organization_name"] == "Acme Labs"
@@ -311,5 +315,5 @@ class TestScoringPipeline:
         client.post(f"/api/v1/assessments/{assessment.id}/calculate-score?evaluee_id={assessor.id}")
         client.post(f"/api/v1/assessments/{assessment.id}/calculate-score?evaluee_id={assessor.id}")
 
-        hist = client.get(f"/api/v1/assessors/{assessor.id}/score-history").json()
+        hist = client.get(f"/api/v1/assessors/{assessor.id}/score-history").json()["items"]
         assert len(hist) == 1, "Duplicate AuditScore records should not be created"

@@ -103,7 +103,7 @@ class TriggerAssessmentComplete(BaseModel):
 class WebhookCreate(BaseModel):
     event_type: str
     target_url: str
-    secret: Optional[str] = None
+    secret: str  # Required: HMAC-SHA256 signing secret for payload verification
 
 
 class WebhookUpdate(BaseModel):
