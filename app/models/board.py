@@ -4,9 +4,13 @@ from sqlalchemy import (
     Column, Integer, String, Float, Boolean, Text, DateTime, ForeignKey, JSON,
     UniqueConstraint, CheckConstraint, Enum as SAEnum
 )
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import JSONB as PG_JSONB
 from sqlalchemy.orm import relationship
 from app.database import Base
+
+# Dialect-agnostic JSONB type (uses PG_JSONB on PostgreSQL, falls back to generic JSON on SQLite)
+JSONB = JSON().with_variant(PG_JSONB, "postgresql")
+
 
 
 class Board(Base):
