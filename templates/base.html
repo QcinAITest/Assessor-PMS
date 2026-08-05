@@ -202,6 +202,15 @@
         async del(url)         { return this._handle(await fetch(url, { method: 'DELETE', headers: this._headers() })); },
     };
 
+    // Unwrap paginated list responses. Endpoints like /assessors, /assessments,
+    // and /audit-logs return a { total, skip, limit, items } envelope; older ones
+    // return a bare array. This normalises both to a plain array for the UI.
+    function asList(res) {
+        if (Array.isArray(res)) return res;
+        if (res && Array.isArray(res.items)) return res.items;
+        return [];
+    }
+
     const currentUser  = window.__qciUser || {};
     const isSysAdmin   = currentUser.role === 'SYSTEM_ADMIN';
     const isBoardAdmin = currentUser.role === 'BOARD_ADMIN';
