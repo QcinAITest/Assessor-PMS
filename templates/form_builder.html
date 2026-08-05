@@ -153,7 +153,10 @@
                                 <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                                 <span>Add Question</span>
                             </button>
-                            <button @click="deleteParam(param.id)" class="text-gray-300 dark:text-gray-600 hover:text-red-500 transition">
+                            <button @click="openEditParam(param, null)" title="Edit area" class="text-gray-300 dark:text-gray-600 hover:text-qci-accent transition">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                            </button>
+                            <button @click="deleteParam(param.id)" title="Delete area" class="text-gray-300 dark:text-gray-600 hover:text-red-500 transition">
                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                             </button>
                         </div>
@@ -174,9 +177,14 @@
                                         </div>
                                     </div>
                                 </div>
-                                <button @click="deleteParam(sub.id)" class="text-gray-200 dark:text-gray-600 hover:text-red-500 transition opacity-0 group-hover:opacity-100">
-                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                                </button>
+                                <div class="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition">
+                                    <button @click="openEditParam(sub, param.id)" title="Edit question" class="text-gray-300 dark:text-gray-600 hover:text-qci-accent transition">
+                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                    </button>
+                                    <button @click="deleteParam(sub.id)" title="Delete question" class="text-gray-200 dark:text-gray-600 hover:text-red-500 transition">
+                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                    </button>
+                                </div>
                             </div>
                         </template>
 
@@ -284,7 +292,7 @@
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <!-- Modal Header -->
             <div class="px-6 py-5 border-b border-gray-100 dark:border-gray-700">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white" x-text="newParam.parent_id ? 'Add a Question' : 'Add an Evaluation Area'"></h3>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white" x-text="editingParamId ? (newParam.parent_id ? 'Edit Question' : 'Edit Evaluation Area') : (newParam.parent_id ? 'Add a Question' : 'Add an Evaluation Area')"></h3>
                 <!-- Sub-question: show parent context -->
                 <p x-show="newParam.parent_id && newParamParentLabel"
                    class="text-sm text-gray-500 dark:text-gray-400 mt-1">
@@ -388,7 +396,7 @@
             </div>
 
             <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-700 flex justify-end space-x-3">
-                <button @click="showAddParam = false; paramError = ''"
+                <button @click="showAddParam = false; paramError = ''; editingParamId = null"
                         :disabled="saving"
                         class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-50">Cancel</button>
                 <button @click="addParam()"
@@ -398,7 +406,7 @@
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
                     </svg>
-                    <span x-text="saving ? 'Saving…' : (newParam.parent_id ? 'Add Question' : 'Add Area')"></span>
+                    <span x-text="saving ? 'Saving…' : (editingParamId ? 'Save Changes' : (newParam.parent_id ? 'Add Question' : 'Add Area'))"></span>
                 </button>
             </div>
         </div>
@@ -522,6 +530,7 @@ function formBuilder(boardCode, formId) {
         showAddParam: false, showAddEssential: false,
         showEditEssential: false, editEssentialId: null, editEssential: {}, editEssentialError: '',
         paramError: '', essentialError: '', saving: false, newParamParentLabel: '',
+        editingParamId: null,
         newParam: { code: '', label: '', weight: 10, data_type: 'RATING_1_5', is_mandatory: true, parent_id: null, sort_order: 0 },
         newEssential: { code: '', label: '' },
 
@@ -568,6 +577,7 @@ function formBuilder(boardCode, formId) {
 
         openAddParam(parentId) {
             this.saving = false;
+            this.editingParamId = null;
             this.newParam = {
                 code: '', label: '',
                 weight: Math.min(10, this.weightRemaining),
@@ -575,6 +585,28 @@ function formBuilder(boardCode, formId) {
                 is_mandatory: true,
                 parent_id: parentId,
                 sort_order: 0,
+            };
+            this.newParamParentLabel = parentId
+                ? (this.topParams.find(p => p.id === parentId)?.label || 'Selected Area')
+                : '';
+            this.paramError = '';
+            this.showAddParam = true;
+        },
+
+        // Edit an existing evaluation area or sub-question. Reuses the add modal;
+        // parent_id and sort_order are carried over from the original so the PUT
+        // (which overwrites every field) doesn't reparent or reorder the item.
+        openEditParam(param, parentId = null) {
+            this.saving = false;
+            this.editingParamId = param.id;
+            this.newParam = {
+                code: param.code || '',
+                label: param.label || '',
+                weight: param.weight || 0,
+                data_type: param.data_type || (parentId ? 'RATING_1_5' : 'CALCULATED'),
+                is_mandatory: !!param.is_mandatory,
+                parent_id: parentId,
+                sort_order: param.sort_order || 0,
             };
             this.newParamParentLabel = parentId
                 ? (this.topParams.find(p => p.id === parentId)?.label || 'Selected Area')
@@ -606,15 +638,23 @@ function formBuilder(boardCode, formId) {
         async addParam() {
             if (!this.newParam.label.trim() || this.saving) return;
             this.paramError = '';
+            // Top-level areas are always CALCULATED (auto-scored from their questions).
             if (!this.newParam.parent_id) this.newParam.data_type = 'CALCULATED';
-            this.newParam.sort_order = this.topParams.length;
+            const editing = !!this.editingParamId;
+            // New items get appended; edits keep their existing position.
+            if (!editing) this.newParam.sort_order = this.topParams.length;
             this.saving = true;
             try {
-                await api.post('/api/v1/boards/' + this.boardId + '/forms/' + formId + '/parameters', this.newParam);
+                if (editing) {
+                    await api.put('/api/v1/boards/' + this.boardId + '/forms/' + formId + '/parameters/' + this.editingParamId, this.newParam);
+                } else {
+                    await api.post('/api/v1/boards/' + this.boardId + '/forms/' + formId + '/parameters', this.newParam);
+                }
                 this.showAddParam = false;
+                this.editingParamId = null;
                 await this.reload();
             } catch (e) {
-                this.paramError = e.message || 'Failed to add. Please try again.';
+                this.paramError = e.message || (editing ? 'Failed to save changes. Please try again.' : 'Failed to add. Please try again.');
             } finally {
                 this.saving = false;
             }
