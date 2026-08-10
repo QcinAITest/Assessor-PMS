@@ -1043,10 +1043,12 @@ function boardAdmin(boardCode) {
         async init() {
             this.board = await api.get('/api/v1/boards/' + boardCode);
             this.configJson = JSON.stringify(this.board.config, null, 2);
-            [this.assessors, this.serviceLines] = await Promise.all([
+            const [assessorsRes, serviceLinesRes] = await Promise.all([
                 api.get('/api/v1/boards/' + this.board.id + '/assessors'),
                 api.get('/api/v1/boards/' + this.board.id + '/service-lines'),
             ]);
+            this.assessors = asList(assessorsRes);
+            this.serviceLines = asList(serviceLinesRes);
             if (isSysAdmin) {
                 [this.webhooks, this.portalAdapters] = await Promise.all([
                     api.get('/api/v1/boards/' + this.board.id + '/webhooks'),
@@ -1141,12 +1143,12 @@ function boardAdmin(boardCode) {
         async saveEditAssessor() {
             await api.put('/api/v1/boards/' + this.board.id + '/assessors/' + this.editAssessorId, this.editAssessor);
             this.showEditAssessor = false;
-            this.assessors = await api.get('/api/v1/boards/' + this.board.id + '/assessors');
+            this.assessors = asList(await api.get('/api/v1/boards/' + this.board.id + '/assessors'));
         },
         async addAssessor() {
             await api.post('/api/v1/boards/' + this.board.id + '/assessors', this.newAssessor);
             this.showAddAssessor = false; this.newAssessor = { name: '', employee_id: '', role_id: '', email: '' };
-            this.assessors = await api.get('/api/v1/boards/' + this.board.id + '/assessors');
+            this.assessors = asList(await api.get('/api/v1/boards/' + this.board.id + '/assessors'));
         },
         async generateLink(formId) {
             const data = await api.post('/api/v1/boards/' + this.board.id + '/forms/' + formId + '/generate-link', {});
@@ -1262,12 +1264,12 @@ function boardAdmin(boardCode) {
             if (!a.is_active) return;
             if (!confirm('Deactivate ' + a.name + '? Their history is preserved.')) return;
             await api.del('/api/v1/boards/' + this.board.id + '/assessors/' + a.id);
-            this.assessors = await api.get('/api/v1/boards/' + this.board.id + '/assessors');
+            this.assessors = asList(await api.get('/api/v1/boards/' + this.board.id + '/assessors'));
         },
 
         async loadAuditLogs() {
             const qs = this.logFilter ? '?direction=' + this.logFilter : '';
-            this.auditLogs = await api.get('/api/v1/boards/' + this.board.id + '/audit-logs' + qs);
+            this.auditLogs = asList(await api.get('/api/v1/boards/' + this.board.id + '/audit-logs' + qs));
         },
 
         async saveConfig() {

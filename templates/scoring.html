@@ -448,10 +448,10 @@ function scoringApp(boardCode) {
         },
 
         async loadAssessors() {
-            this.assessors = await api.get('/api/v1/boards/' + this.boardId + '/assessors');
+            this.assessors = asList(await api.get('/api/v1/boards/' + this.boardId + '/assessors'));
         },
         async loadAssessments() {
-            this.assessments = await api.get('/api/v1/boards/' + this.boardId + '/assessments');
+            this.assessments = asList(await api.get('/api/v1/boards/' + this.boardId + '/assessments'));
         },
 
         async createAssessment() {

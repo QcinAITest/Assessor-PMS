@@ -11,6 +11,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from app.database import get_db
 from app.models.board import Board
@@ -19,6 +20,24 @@ from app.api.auth import get_current_user
 from app.models.auth import User
 
 router = APIRouter(prefix="/api/v1/boards/{board_id}", tags=["Programs"])
+
+
+def _safe_commit(db: Session, *, conflict_msg: str):
+    """Commit and translate DB errors into meaningful HTTP responses.
+
+    Without this, a duplicate key or any other DB-level failure bubbles up as an
+    opaque 500 "Internal Server Error" (see bug: Add Program). We roll back so the
+    session stays usable, return 409 for integrity/constraint violations, and
+    surface the real driver message for anything else instead of hiding it.
+    """
+    try:
+        db.commit()
+    except IntegrityError as e:
+        db.rollback()
+        raise HTTPException(409, conflict_msg) from e
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise HTTPException(500, f"Database error: {getattr(e, 'orig', e)}") from e
 
 
 # --------------------------------------------------------------------------- #
@@ -103,7 +122,7 @@ def create_service_line(
     _check_board_access(current_user, board)
     sl = ServiceLine(id=str(uuid.uuid4()), board_id=board.id, **data.dict())
     db.add(sl)
-    db.commit()
+    _safe_commit(db, conflict_msg=f"A service line with code '{data.code}' already exists in this board")
     db.refresh(sl)
     return _sl_dict(sl)
 
@@ -183,6 +202,13 @@ def create_program(
     ).first()
     if not sl:
         raise HTTPException(404, "Service line not found")
+    # Pre-check duplicate code within the board so we return a clean 409 rather
+    # than relying on a DB constraint that may or may not exist per environment.
+    existing = db.query(Program).filter(
+        Program.board_id == board.id, Program.code == data.code
+    ).first()
+    if existing:
+        raise HTTPException(409, f"A program with code '{data.code}' already exists in this board")
     program = Program(
         id=str(uuid.uuid4()),
         service_line_id=sl_id,
@@ -190,7 +216,7 @@ def create_program(
         **data.dict(),
     )
     db.add(program)
-    db.commit()
+    _safe_commit(db, conflict_msg=f"A program with code '{data.code}' already exists in this board")
     db.refresh(program)
     return _program_dict(program)
 

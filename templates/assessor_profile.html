@@ -266,7 +266,7 @@ function assessorProfileApp(assessorId, boardCode) {
                 ]);
                 this.assessor   = assessorData;
                 this.cumulative = cumulativeData?.cumulative_score !== undefined ? cumulativeData : null;
-                this.scoreHistory = historyData || [];
+                this.scoreHistory = asList(historyData);
             } catch (e) {
                 this.error = e.message || 'Failed to load assessor data.';
             } finally {
