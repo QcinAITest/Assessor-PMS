@@ -8,7 +8,8 @@ import uuid
 from app.database import get_db
 from app.models.board import (
     Board, BoardRole, FormTemplate, Parameter, EssentialCriterion,
-    FrequencyRule, Webhook, FormSubmission, Assessor, Assessment, log_config_change
+    FrequencyRule, Webhook, FormSubmission, Assessor, Assessment,
+    FormVersion, log_config_change
 )
 from app.models.auth import User
 from app.schemas.requests import (
@@ -185,6 +186,7 @@ def create_form(board_id: str, data: FormTemplateCreate, _: User = Depends(requi
     ft = FormTemplate(id=str(uuid.uuid4()), board_id=board.id, **data.dict())
     db.add(ft)
     log_config_change(db, board.id, "FORM_CREATED", "form_template", ft.id, data.dict())
+    record_form_version(db, ft, "Form created", bump=False)  # seed history at version 1
     db.commit()
     return _form_detail(ft)
 
@@ -215,7 +217,7 @@ def update_form(board_id: str, form_id: str, data: FormTemplateCreate, _: User =
     changes = data.dict()
     for k, v in changes.items():
         setattr(ft, k, v)
-    ft.version = (ft.version or 1) + 1   # Fix 4: increment version on every update
+    record_form_version(db, ft, "Form details updated")  # Fix 4: bump version + snapshot history
     log_config_change(db, board_id, "FORM_UPDATED", "form_template", form_id,
                       {**changes, "new_version": ft.version})
     db.commit()
@@ -269,6 +271,8 @@ def add_parameter(board_id: str, form_id: str, data: ParameterCreate, _: User = 
             )
     param = Parameter(id=str(uuid.uuid4()), form_template_id=form_id, **data.dict())
     db.add(param)
+    kind = "area" if data.parent_id is None else "question"
+    record_form_version(db, ft, f"Added {kind}: {data.label}")
     db.commit()
     db.expire(ft)
     top_weight_total = round(sum(p.weight or 0 for p in ft.parameters if p.parent_id is None), 10)
@@ -298,6 +302,8 @@ def update_parameter(board_id: str, form_id: str, param_id: str, data: Parameter
             )
     for k, v in data.dict().items():
         setattr(param, k, v)
+    kind = "area" if param.parent_id is None else "question"
+    record_form_version(db, ft, f"Edited {kind}: {data.label}")
     db.commit()
     return {"id": param.id, "code": param.code, "label": param.label, "weight": param.weight}
 
@@ -307,7 +313,11 @@ def delete_parameter(board_id: str, form_id: str, param_id: str, _: User = Depen
     param = db.query(Parameter).filter(Parameter.id == param_id, Parameter.form_template_id == form_id).first()
     if not param:
         raise HTTPException(404, "Parameter not found")
+    ft = db.query(FormTemplate).filter(FormTemplate.id == form_id).first()
+    kind = "area" if param.parent_id is None else "question"
+    label = param.label
     db.delete(param)
+    record_form_version(db, ft, f"Deleted {kind}: {label}")
     db.commit()
     return {"deleted": True}
 
@@ -319,6 +329,37 @@ def get_normalized_weights(board_id: str, form_id: str, _: User = Depends(requir
         raise HTTPException(404, "Form template not found")
     weights = normalize_weights(ft.parameters)
     return {"form_id": form_id, "normalized_weights": weights, "sum_check": round(sum(weights.values()), 4)}
+
+
+# --- Form Version History ---
+@router.get("/{board_id}/forms/{form_id}/versions")
+def list_form_versions(board_id: str, form_id: str, _: User = Depends(require_board_access), db: Session = Depends(get_db)):
+    ft = db.query(FormTemplate).filter(FormTemplate.id == form_id, FormTemplate.board_id == board_id).first()
+    if not ft:
+        raise HTTPException(404, "Form template not found")
+    versions = (db.query(FormVersion)
+                .filter(FormVersion.form_template_id == form_id)
+                .order_by(FormVersion.version.desc())
+                .all())
+    return {
+        "current_version": ft.version,
+        "versions": [{"version": v.version, "change_summary": v.change_summary,
+                      "created_at": v.created_at} for v in versions],
+    }
+
+
+@router.get("/{board_id}/forms/{form_id}/versions/{version}")
+def get_form_version(board_id: str, form_id: str, version: int, _: User = Depends(require_board_access), db: Session = Depends(get_db)):
+    ft = db.query(FormTemplate).filter(FormTemplate.id == form_id, FormTemplate.board_id == board_id).first()
+    if not ft:
+        raise HTTPException(404, "Form template not found")
+    fv = (db.query(FormVersion)
+          .filter(FormVersion.form_template_id == form_id, FormVersion.version == version)
+          .first())
+    if not fv:
+        raise HTTPException(404, f"Version {version} not found for this form")
+    return {"version": fv.version, "change_summary": fv.change_summary,
+            "created_at": fv.created_at, "snapshot": fv.snapshot}
 
 
 # --- Form Distribution Links ---
@@ -370,6 +411,7 @@ def add_essential(board_id: str, form_id: str, data: EssentialCriterionCreate, _
     ec = EssentialCriterion(id=str(uuid.uuid4()), form_template_id=form_id, **data.dict())
     db.add(ec)
     log_config_change(db, board_id, "ESSENTIAL_CREATED", "essential_criterion", ec.id, data.dict())
+    record_form_version(db, ft, f"Added essential criterion: {data.label}")
     db.commit()
     return {"id": ec.id, "code": ec.code, "label": ec.label}
 
@@ -390,6 +432,7 @@ def update_essential(board_id: str, form_id: str, ec_id: str,
     for k, v in changes.items():
         setattr(ec, k, v)
     log_config_change(db, board_id, "ESSENTIAL_UPDATED", "essential_criterion", ec_id, changes)
+    record_form_version(db, ft, f"Edited essential criterion: {ec.label}")
     db.commit()
     return {"id": ec.id, "code": ec.code, "label": ec.label, "sort_order": ec.sort_order}
 
@@ -407,7 +450,9 @@ def delete_essential(board_id: str, form_id: str, ec_id: str, _: User = Depends(
         raise HTTPException(404, "Essential criterion not found")
     log_config_change(db, board_id, "ESSENTIAL_DELETED", "essential_criterion", ec_id,
                       {"code": ec.code, "label": ec.label})
+    ec_label = ec.label
     db.delete(ec)
+    record_form_version(db, ft, f"Deleted essential criterion: {ec_label}")
     db.commit()
     return {"deleted": True}
 
@@ -569,3 +614,25 @@ def _param_tree(p: Parameter):
         "data_type": p.data_type, "is_mandatory": p.is_mandatory,
         "children": [_param_tree(c) for c in (p.children or [])],
     }
+
+
+def record_form_version(db: Session, ft: FormTemplate, summary: str, *, bump: bool = True):
+    """
+    Snapshot the full form structure into form_versions for history, optionally
+    bumping the live form's version first. Call after the mutating add/setattr/
+    delete but before commit — a flush + refresh makes the just-changed
+    parameters/essentials visible in the snapshot.
+    """
+    db.flush()
+    db.refresh(ft)  # reload columns; relationships reload lazily with the new state
+    if bump:
+        ft.version = (ft.version or 1) + 1
+        db.flush()
+    db.add(FormVersion(
+        id=str(uuid.uuid4()),
+        form_template_id=ft.id,
+        board_id=ft.board_id,
+        version=ft.version,
+        snapshot=_form_detail(ft),
+        change_summary=(summary or "")[:300] or None,
+    ))

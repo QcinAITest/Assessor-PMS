@@ -355,6 +355,25 @@ class AuditLog(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+class FormVersion(Base):
+    """
+    Immutable history of a form's structure. One row is written every time the
+    form changes (parameters/essentials/fields edited), capturing the full form
+    definition as a JSON snapshot so past versions can always be reviewed.
+    The live FormTemplate stays editable; these rows are the audit trail.
+    """
+    __tablename__ = "form_versions"
+    __table_args__ = (UniqueConstraint("form_template_id", "version"),)
+
+    id = Column(String(36), primary_key=True)
+    form_template_id = Column(String(36), ForeignKey("form_templates.id", ondelete="CASCADE"), nullable=False)
+    board_id = Column(String(36), ForeignKey("boards.id", ondelete="CASCADE"), nullable=False)
+    version = Column(Integer, nullable=False)
+    snapshot = Column(JSONB, nullable=False, doc="Full form definition at this version")
+    change_summary = Column(String(300), doc="Human-readable note, e.g. 'Edited question: ...'")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 def log_config_change(db, board_id: str, event_type: str, entity: str, entity_id, changes: dict):
     """
     Write a SYSTEM-direction AuditLog row for any config-level mutation
