@@ -195,6 +195,8 @@ async def ingest_portal_event(
             result = await _handle_assessment_complete(db, board, translated)
         elif event_type == "SCORE_REQUEST":
             result = await _handle_score_request(db, board, translated)
+        elif event_type in ("CLOSE_ASSESSMENT", "ASSESSMENT_CLOSED"):
+            result = await _handle_close_assessment(db, board, translated)
         else:
             logger.warning(f"[INGEST] Unhandled event_type={event_type} for board={board_code}")
             result = {"message": f"Event '{event_type}' received but no handler registered"}
@@ -257,6 +259,41 @@ async def _handle_assessment_complete(db: Session, board: Board, payload: dict) 
     })
 
     return {"assessment_id": assessment_id, "evaluees": results}
+
+
+async def _handle_close_assessment(db: Session, board: Board, payload: dict) -> dict:
+    """
+    Handles CLOSE_ASSESSMENT: lets an external platform drive the SCORED -> CLOSED
+    transition via the ingest API (the board-admin UI does the same via PATCH).
+    Mirrors the state machine — an assessment can only be closed once it is SCORED.
+    Idempotent: closing an already-CLOSED assessment is a no-op success.
+    """
+    from app.services.webhook_service import fire_webhooks
+
+    assessment_id = payload.get("assessment_id")
+    if not assessment_id:
+        raise ValueError("assessment_id is required for CLOSE_ASSESSMENT")
+
+    assessment = db.query(Assessment).filter(
+        Assessment.id == assessment_id,
+        Assessment.board_id == board.id,
+    ).first()
+    if not assessment:
+        raise ValueError(f"Assessment '{assessment_id}' not found for this board")
+
+    if assessment.status == "CLOSED":
+        return {"assessment_id": assessment_id, "status": "CLOSED", "already_closed": True}
+    if assessment.status != "SCORED":
+        raise ValueError(
+            f"Cannot close assessment in status '{assessment.status}'. "
+            "It must be SCORED first (SCORED -> CLOSED)."
+        )
+
+    assessment.status = "CLOSED"
+    db.flush()
+
+    await fire_webhooks(db, board.id, "ASSESSMENT_CLOSED", {"assessment_id": assessment_id})
+    return {"assessment_id": assessment_id, "old_status": "SCORED", "status": "CLOSED"}
 
 
 async def _handle_score_request(db: Session, board: Board, payload: dict) -> dict:
