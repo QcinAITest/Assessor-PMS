@@ -111,11 +111,14 @@
                                               }"
                                               x-text="a.status.replace(/_/g, ' ')"></span>
                                     </td>
-                                    <td class="px-4 py-3">
+                                    <td class="px-4 py-3 whitespace-nowrap">
                                         <button @click="selectedAssessment = a"
                                                 class="text-xs font-semibold text-[#1A6BBF] hover:underline">
                                             Select
                                         </button>
+                                        <button x-show="nextStatusLabel(a.status)" @click="transitionStatus(a)"
+                                                class="ml-3 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline"
+                                                x-text="nextStatusLabel(a.status)"></button>
                                     </td>
                                 </tr>
                             </template>
@@ -452,6 +455,27 @@ function scoringApp(boardCode) {
         },
         async loadAssessments() {
             this.assessments = asList(await api.get('/api/v1/boards/' + this.boardId + '/assessments'));
+        },
+
+        // Manual status transitions (state machine mirrors the backend VALID_TRANSITIONS).
+        // PENDING_FEEDBACK -> SCORED normally happens automatically on calculate-score,
+        // so the button that mattered most (SCORED -> CLOSED) previously had no UI at all.
+        statusFlow: {
+            IN_PROGRESS:      { next: 'PENDING_FEEDBACK', label: 'Mark Pending' },
+            PENDING_FEEDBACK: { next: 'SCORED',           label: 'Mark Scored' },
+            SCORED:           { next: 'CLOSED',           label: 'Close' },
+        },
+        nextStatusLabel(status) { return this.statusFlow[status]?.label || null; },
+        async transitionStatus(a) {
+            const step = this.statusFlow[a.status];
+            if (!step) return;
+            if (step.next === 'CLOSED' && !confirm('Close this assessment? It becomes read-only.')) return;
+            try {
+                await api.patch('/api/v1/boards/' + this.boardId + '/assessments/' + a.id + '/status', { new_status: step.next });
+                await this.loadAssessments();
+            } catch (e) {
+                alert(e.message || 'Could not update status.');
+            }
         },
 
         async createAssessment() {
