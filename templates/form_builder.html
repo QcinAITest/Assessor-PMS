@@ -21,6 +21,8 @@
                     <span>Weight: <strong class="dark:text-gray-300" x-text="((form.stakeholder_weight||0)*100)+'%'"></strong></span>
                     <span :class="form.is_mandatory ? 'text-red-600 dark:text-red-400 font-medium' : 'text-gray-400 dark:text-gray-500'"
                           x-text="form.is_mandatory ? 'Mandatory' : 'Optional'"></span>
+                    <span class="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-xs font-medium text-gray-600 dark:text-gray-300"
+                          x-text="'Version ' + (form.version || 1)"></span>
                 </div>
             </div>
             <div class="flex items-center flex-wrap gap-3">
@@ -32,6 +34,13 @@
                     </svg>
                     <span>Preview Form</span>
                 </a>
+                <button @click="openHistory()"
+                   class="inline-flex items-center space-x-1.5 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <span>History</span>
+                </button>
                 <span x-show="weightSum === 100" class="flex items-center space-x-1.5 text-xs text-green-600 dark:text-green-400 font-medium">
                     <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
                     <span>Weights balanced</span>
@@ -350,6 +359,20 @@
                     </div>
                 </div>
 
+                <!-- Weight (sub-questions) — relative weight within the area -->
+                <div x-show="newParam.parent_id">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                        Question Weight
+                        <span class="text-gray-400 dark:text-gray-500 font-normal ml-1">(relative within this area)</span>
+                    </label>
+                    <div class="flex items-center border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden w-32">
+                        <input x-model.number="newParam.weight" type="number" min="0" max="100"
+                               class="w-20 text-center py-2 text-sm outline-none border-none bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                        <span class="pr-3 text-sm text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-700">%</span>
+                    </div>
+                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Leave all questions at 0 to weight them equally; set weights to make some questions count more.</p>
+                </div>
+
                 <!-- Weight (only for top-level) -->
                 <div x-show="!newParam.parent_id">
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
@@ -518,6 +541,68 @@
         </div>
     </div>
 </div>
+
+    <!-- Version History Modal -->
+    <div x-show="showHistory" x-cloak
+         class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" @click.self="showHistory=false">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto">
+            <div class="px-6 py-5 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Version History</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5" x-text="'Current version: ' + (form.version || 1)"></p>
+                </div>
+                <button @click="showHistory=false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl leading-none">&times;</button>
+            </div>
+
+            <!-- Version list -->
+            <div x-show="!historySnapshot" class="px-6 py-4">
+                <div x-show="historyVersions.length === 0" class="text-sm text-gray-400 dark:text-gray-500 py-6 text-center">
+                    No history recorded yet. Future edits will appear here as new versions.
+                </div>
+                <ul class="divide-y divide-gray-100 dark:divide-gray-700">
+                    <template x-for="v in historyVersions" :key="v.version">
+                        <li class="py-3 flex items-center justify-between">
+                            <div>
+                                <div class="flex items-center space-x-2">
+                                    <span class="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-xs font-medium text-gray-600 dark:text-gray-300" x-text="'v' + v.version"></span>
+                                    <span class="text-sm text-gray-800 dark:text-gray-200" x-text="v.change_summary || 'Updated'"></span>
+                                </div>
+                                <div class="text-xs text-gray-400 dark:text-gray-500 mt-0.5" x-text="v.created_at ? new Date(v.created_at).toLocaleString() : ''"></div>
+                            </div>
+                            <button @click="viewSnapshot(v.version)" class="text-xs font-medium text-qci-accent hover:text-blue-700">View</button>
+                        </li>
+                    </template>
+                </ul>
+            </div>
+
+            <!-- Snapshot detail -->
+            <div x-show="historySnapshot" class="px-6 py-4">
+                <button @click="historySnapshot=null" class="text-xs text-qci-accent hover:text-blue-700 mb-3">&larr; Back to history</button>
+                <template x-if="historySnapshot">
+                    <div>
+                        <h4 class="font-semibold text-gray-900 dark:text-white" x-text="'Version ' + historySnapshot.version + ' — ' + (historySnapshot.snapshot.name || '')"></h4>
+                        <p class="text-xs text-gray-400 dark:text-gray-500 mb-4" x-text="historySnapshot.change_summary"></p>
+                        <template x-for="area in (historySnapshot.snapshot.parameters || [])" :key="area.id">
+                            <div class="mb-3 border border-gray-100 dark:border-gray-700 rounded-lg p-3">
+                                <div class="flex items-center justify-between">
+                                    <span class="font-medium text-gray-800 dark:text-gray-200" x-text="area.label"></span>
+                                    <span class="text-xs text-gray-500 dark:text-gray-400" x-text="'Weight: ' + (area.weight||0) + '%'"></span>
+                                </div>
+                                <ul class="mt-2 space-y-1">
+                                    <template x-for="q in (area.children || [])" :key="q.id">
+                                        <li class="text-sm text-gray-600 dark:text-gray-300 flex items-center justify-between">
+                                            <span x-text="q.label"></span>
+                                            <span class="text-xs text-gray-400" x-text="friendlyType(q.data_type) + (q.weight ? ' · ' + q.weight + '%' : '')"></span>
+                                        </li>
+                                    </template>
+                                </ul>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
@@ -531,6 +616,7 @@ function formBuilder(boardCode, formId) {
         showEditEssential: false, editEssentialId: null, editEssential: {}, editEssentialError: '',
         paramError: '', essentialError: '', saving: false, newParamParentLabel: '',
         editingParamId: null,
+        showHistory: false, historyVersions: [], historySnapshot: null,
         newParam: { code: '', label: '', weight: 10, data_type: 'RATING_1_5', is_mandatory: true, parent_id: null, sort_order: 0 },
         newEssential: { code: '', label: '' },
 
@@ -580,7 +666,7 @@ function formBuilder(boardCode, formId) {
             this.editingParamId = null;
             this.newParam = {
                 code: '', label: '',
-                weight: Math.min(10, this.weightRemaining),
+                weight: parentId ? 0 : Math.min(10, this.weightRemaining),
                 data_type: 'RATING_1_5',
                 is_mandatory: true,
                 parent_id: parentId,
@@ -626,6 +712,23 @@ function formBuilder(boardCode, formId) {
             }
         },
 
+        async openHistory() {
+            this.historySnapshot = null;
+            this.showHistory = true;
+            try {
+                const data = await api.get('/api/v1/boards/' + this.boardId + '/forms/' + formId + '/versions');
+                this.historyVersions = data.versions || [];
+            } catch (e) {
+                this.historyVersions = [];
+            }
+        },
+        async viewSnapshot(version) {
+            try {
+                this.historySnapshot = await api.get('/api/v1/boards/' + this.boardId + '/forms/' + formId + '/versions/' + version);
+            } catch (e) {
+                alert('Could not load version ' + version);
+            }
+        },
         async reload() {
             try {
                 const result = await api.get('/api/v1/boards/' + this.boardId + '/forms/' + formId);

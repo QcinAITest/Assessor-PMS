@@ -39,11 +39,20 @@ def calculate_parameter_score(parameter: Parameter, responses: dict) -> Optional
     """
     if parameter.data_type == "CALCULATED":
         child_scores = []
+        child_weights = []
         for child in parameter.children:
             score = calculate_parameter_score(child, responses)
             if score is not None:
                 child_scores.append(score)
-        return sum(child_scores) / len(child_scores) if child_scores else None
+                child_weights.append(child.weight or 0)
+        if not child_scores:
+            return None
+        # Weighted average of sub-questions when weights are set; falls back to a
+        # plain average when all child weights are 0 (backward-compatible default).
+        total_w = sum(child_weights)
+        if total_w > 0:
+            return sum(s * w for s, w in zip(child_scores, child_weights)) / total_w
+        return sum(child_scores) / len(child_scores)
 
     value = responses.get(parameter.code)
     if value is None:
