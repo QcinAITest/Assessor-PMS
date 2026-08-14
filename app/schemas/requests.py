@@ -80,6 +80,7 @@ class AssessorUpdate(BaseModel):
 
 class AssessmentCreate(BaseModel):
     assessment_type: str
+    application_id: Optional[str] = None
     organization_name: Optional[str] = None
     scheme: Optional[str] = None
     standard_version: Optional[str] = None

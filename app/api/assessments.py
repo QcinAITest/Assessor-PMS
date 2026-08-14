@@ -395,6 +395,7 @@ def _assessor_dict(a):
 def _assessment_dict(a):
     return {
         "id": a.id, "assessment_type": a.assessment_type,
+        "application_id": a.application_id,
         "organization_name": a.organization_name, "scheme": a.scheme,
         "assessment_date": a.assessment_date, "status": a.status,
     }

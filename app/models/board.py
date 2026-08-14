@@ -204,6 +204,7 @@ class Assessment(Base):
 
     id = Column(String(36), primary_key=True)
     board_id = Column(String(36), ForeignKey("boards.id"), nullable=False)
+    application_id = Column(String(100), doc="External application ID / reference number from the portal")
     assessment_type = Column(String(50), nullable=False,
                              doc="Initial | Surveillance | Re-assessment | Extension | Onsite")
     organization_name = Column(String(500))
