@@ -245,10 +245,23 @@ def delete_form(board_id: str, form_id: str, _: User = Depends(require_board_acc
             f"Cannot delete '{ft.name}' — it has {submitted_count} submission(s) attached. "
             f"Deactivate it instead by setting is_active=false."
         )
+    # Clean up unused distribution-link stubs (CREATED submissions with no assessment).
+    # They aren't real feedback, but their NOT NULL form_template_id FK would otherwise
+    # make the delete fail with a 500 (the submissions relationship has no delete cascade).
+    db.query(FormSubmission).filter(
+        FormSubmission.form_template_id == form_id,
+        FormSubmission.assessment_id.is_(None),
+    ).delete(synchronize_session=False)
+    # Remove version-history rows explicitly (SQLite doesn't enforce ON DELETE CASCADE).
+    db.query(FormVersion).filter(FormVersion.form_template_id == form_id).delete(synchronize_session=False)
     log_config_change(db, board_id, "FORM_DELETED", "form_template", form_id,
                       {"code": ft.code, "name": ft.name})
     db.delete(ft)
-    db.commit()
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(500, f"Could not delete form: {getattr(e, 'orig', e)}") from e
     return {"deleted": True}
 
 
