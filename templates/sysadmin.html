@@ -308,16 +308,16 @@
             <p class="text-xs text-[#5B6B82] mb-5" x-text="syncAssessorsBoard ? 'Board: ' + syncAssessorsBoard.code + ' – ' + syncAssessorsBoard.name : ''"></p>
 
             <div x-show="!syncAssessorsResult">
-                <!-- CSV file upload -->
-                <label class="block text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-1.5">Upload CSV file</label>
+                <!-- CSV / Excel file upload -->
+                <label class="block text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-1.5">Upload CSV or Excel file</label>
                 <div class="flex items-center justify-between gap-3">
-                    <input type="file" accept=".csv,text/csv" @change="handleAssessorFile($event)"
+                    <input type="file" accept=".csv,.xlsx,.xls,.xlsm,text/csv" @change="handleAssessorFile($event)"
                            class="block w-full text-xs text-[#5B6B82] file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-[#071B2F] file:text-white hover:file:bg-[#0D2F52] file:cursor-pointer">
                     <button type="button" @click="downloadAssessorTemplate()" class="whitespace-nowrap text-xs text-[#1A6BBF] hover:text-[#0D2F52] font-medium">Download template</button>
                 </div>
-                <p class="mt-1.5 text-xs text-[#5B6B82]">Columns: <code>employee_id</code>, <code>name</code>, <code>email</code>, <code>role_id</code> (employee_id and name required).</p>
-                <p x-show="syncAssessorsFileCount > 0" class="mt-1 text-xs text-green-600 dark:text-green-400">
-                    ✓ Parsed <strong x-text="syncAssessorsFileCount"></strong> assessor(s) from <span x-text="syncAssessorsFileName"></span> — review below and Run Sync.
+                <p class="mt-1.5 text-xs text-[#5B6B82]">Accepts <strong>.csv</strong> or <strong>.xlsx</strong>. Columns: <code>employee_id</code>, <code>name</code>, <code>email</code>, <code>role_id</code> (employee_id and name required).</p>
+                <p x-show="syncAssessorsFileName" class="mt-1 text-xs text-green-600 dark:text-green-400">
+                    ✓ Selected <strong x-text="syncAssessorsFileName"></strong> — click <strong>Run Sync</strong> to upload.
                 </p>
 
                 <div class="flex items-center my-4">
@@ -584,7 +584,7 @@ function sysAdminApp() {
         showEditBoard: false, editBoardId: null, editBoardData: {}, editBoardError: '',
         showDeactivateBoard: false, deactivateBoardTarget: null, deactivateBoardError: '',
         // Sync state
-        showSyncAssessors: false, syncAssessorsBoard: null, syncAssessorsJson: '', syncAssessorsDeactivate: false, syncAssessorsResult: null, syncAssessorsError: '', syncAssessorsFileName: '', syncAssessorsFileCount: 0,
+        showSyncAssessors: false, syncAssessorsBoard: null, syncAssessorsJson: '', syncAssessorsDeactivate: false, syncAssessorsResult: null, syncAssessorsError: '', syncAssessorsFileName: '', assessorFile: null,
         showSyncUsers: false, syncUsersJson: '', syncUsersResult: null, syncUsersError: '',
 
         get sysAdmins() { return this.users.filter(u => u.role === 'SYSTEM_ADMIN'); },
@@ -728,69 +728,14 @@ function sysAdminApp() {
             this.syncAssessorsResult = null;
             this.syncAssessorsError = '';
             this.syncAssessorsFileName = '';
-            this.syncAssessorsFileCount = 0;
+            this.assessorFile = null;
             this.showSyncAssessors = true;
-        },
-        // Minimal RFC-4180-ish CSV parser: handles quoted fields and embedded commas/quotes.
-        _parseCsv(text) {
-            const lines = String(text).replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n').filter(l => l.trim().length);
-            if (!lines.length) return { headers: [], rows: [] };
-            const parseLine = (line) => {
-                const out = []; let cur = '', inQ = false;
-                for (let i = 0; i < line.length; i++) {
-                    const c = line[i];
-                    if (inQ) {
-                        if (c === '"' && line[i + 1] === '"') { cur += '"'; i++; }
-                        else if (c === '"') inQ = false;
-                        else cur += c;
-                    } else if (c === '"') inQ = true;
-                    else if (c === ',') { out.push(cur); cur = ''; }
-                    else cur += c;
-                }
-                out.push(cur);
-                return out.map(s => s.trim());
-            };
-            const headers = parseLine(lines[0]).map(h => h.toLowerCase());
-            const rows = [];
-            for (let i = 1; i < lines.length; i++) {
-                const vals = parseLine(lines[i]);
-                const obj = {};
-                headers.forEach((h, idx) => obj[h] = (vals[idx] ?? '').trim());
-                rows.push(obj);
-            }
-            return { headers, rows };
         },
         handleAssessorFile(ev) {
             this.syncAssessorsError = '';
-            this.syncAssessorsFileName = '';
-            this.syncAssessorsFileCount = 0;
             const file = ev.target.files && ev.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = () => {
-                try {
-                    const { headers, rows } = this._parseCsv(reader.result);
-                    if (!headers.includes('employee_id') || !headers.includes('name')) {
-                        this.syncAssessorsError = 'CSV must include at least "employee_id" and "name" columns.';
-                        return;
-                    }
-                    const assessors = rows
-                        .filter(r => (r.employee_id || '').length && (r.name || '').length)
-                        .map(r => {
-                            const o = { employee_id: r.employee_id, name: r.name };
-                            if (r.email) o.email = r.email;
-                            if (r.role_id) o.role_id = r.role_id;
-                            return o;
-                        });
-                    if (!assessors.length) { this.syncAssessorsError = 'No valid rows found (each needs employee_id and name).'; return; }
-                    this.syncAssessorsJson = JSON.stringify(assessors, null, 2);
-                    this.syncAssessorsFileName = file.name;
-                    this.syncAssessorsFileCount = assessors.length;
-                } catch (e) {
-                    this.syncAssessorsError = 'Could not parse the CSV file.';
-                }
-            };
-            reader.readAsText(file);
+            this.assessorFile = file || null;
+            this.syncAssessorsFileName = file ? file.name : '';
         },
         downloadAssessorTemplate() {
             const csv = 'employee_id,name,email,role_id\nEMP001,Dr. Ravi Kumar,ravi@qci.org,ROLE_PA\nEMP002,Priya Singh,priya@qci.org,ROLE_COASS\n';
@@ -803,18 +748,39 @@ function sysAdminApp() {
         },
         async runSyncAssessors() {
             this.syncAssessorsError = '';
-            let assessors;
-            try { assessors = JSON.parse(this.syncAssessorsJson); }
-            catch { this.syncAssessorsError = 'Invalid JSON — check your payload.'; return; }
-            if (!Array.isArray(assessors)) { this.syncAssessorsError = 'Payload must be a JSON array.'; return; }
             try {
-                const result = await api.post(
-                    '/api/v1/sync/boards/' + this.syncAssessorsBoard.id + '/assessors',
-                    { assessors, deactivate_missing: this.syncAssessorsDeactivate }
-                );
+                let result;
+                if (this.assessorFile) {
+                    // File path: send CSV/Excel to the server, which parses + syncs.
+                    const fd = new FormData();
+                    fd.append('file', this.assessorFile);
+                    fd.append('deactivate_missing', this.syncAssessorsDeactivate ? 'true' : 'false');
+                    const token = localStorage.getItem('qci_token');
+                    const res = await fetch('/api/v1/sync/boards/' + this.syncAssessorsBoard.id + '/assessors/upload', {
+                        method: 'POST',
+                        headers: token ? { 'Authorization': 'Bearer ' + token } : {},
+                        body: fd,
+                    });
+                    if (!res.ok) {
+                        let msg = await res.text();
+                        try { msg = JSON.parse(msg).detail || msg; } catch (_) {}
+                        throw new Error(msg);
+                    }
+                    result = await res.json();
+                } else {
+                    // JSON paste path.
+                    let assessors;
+                    try { assessors = JSON.parse(this.syncAssessorsJson); }
+                    catch { this.syncAssessorsError = 'Invalid JSON — check your payload.'; return; }
+                    if (!Array.isArray(assessors)) { this.syncAssessorsError = 'Payload must be a JSON array.'; return; }
+                    result = await api.post(
+                        '/api/v1/sync/boards/' + this.syncAssessorsBoard.id + '/assessors',
+                        { assessors, deactivate_missing: this.syncAssessorsDeactivate }
+                    );
+                }
                 this.syncAssessorsResult = result;
                 if (result.errors && result.errors.length) console.warn('Sync errors:', result.errors);
-            } catch(e) {
+            } catch (e) {
                 this.syncAssessorsError = e.message || 'Sync failed.';
             }
         },
