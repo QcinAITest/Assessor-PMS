@@ -137,8 +137,15 @@ def _parse_xlsx_bytes(content: bytes) -> list:
         import openpyxl
     except ImportError:
         raise HTTPException(400, "Excel support is not installed on the server. Upload a CSV instead.")
-    wb = openpyxl.load_workbook(io.BytesIO(content), read_only=True, data_only=True)
-    ws = wb.active
+    try:
+        wb = openpyxl.load_workbook(io.BytesIO(content), read_only=True, data_only=True)
+    except Exception:
+        raise HTTPException(
+            400,
+            "Could not read the Excel file. It must be a valid .xlsx (legacy .xls and "
+            "corrupt/password-protected files aren't supported — re-save as .xlsx or CSV).",
+        )
+    ws = wb.active  # only the active/first sheet is read
     it = ws.iter_rows(values_only=True)
     try:
         header = [str(h).strip().lower() if h is not None else "" for h in next(it)]
@@ -186,12 +193,23 @@ def upload_assessors(
     board = _get_board_or_404(db, board_id)
     content = file.file.read()
     fname = (file.filename or "").lower()
-    if fname.endswith(".xlsx") or fname.endswith(".xlsm") or fname.endswith(".xls"):
+    if fname.endswith(".xls") and not fname.endswith(".xlsx"):
+        raise HTTPException(400, "Legacy .xls files aren't supported — save the file as .xlsx or CSV and re-upload.")
+    if fname.endswith(".xlsx") or fname.endswith(".xlsm"):
         items = _parse_xlsx_bytes(content)
     else:
-        items = _parse_csv_bytes(content)
+        try:
+            items = _parse_csv_bytes(content)
+        except HTTPException:
+            raise
+        except Exception:
+            raise HTTPException(400, "Could not read the file as CSV. Check it's a plain .csv or .xlsx file.")
     if not items:
-        raise HTTPException(400, "No valid rows found — each row needs an employee_id and a name.")
+        raise HTTPException(
+            400,
+            "No valid rows found. Ensure the first row has the column headers "
+            "employee_id, name, email, role_id — and each row has an employee_id and a name.",
+        )
     return _perform_assessor_sync(db, board, items, deactivate_missing, {}, portal_id=None)
 
 
