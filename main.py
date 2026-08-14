@@ -23,18 +23,39 @@ Base.metadata.create_all(bind=engine)
 
 
 def _ensure_schema():
-    """Idempotent column adds for tables that predate a new field.
-    create_all() creates missing tables but never ALTERs existing ones, so new
-    columns on already-deployed tables need an explicit, safe ADD COLUMN."""
+    """Idempotent ADD COLUMN for tables that predate newer model fields.
+
+    create_all() creates missing tables but never ALTERs existing ones, so a
+    column added to an already-deployed table must be backfilled explicitly —
+    otherwise every query that selects that model 500s (e.g. deleting a form
+    runs a count over form_submissions). Type names below are accepted by both
+    PostgreSQL and SQLite.
+    """
     from sqlalchemy import inspect as sa_inspect, text
+    required = {
+        "assessments": {
+            "application_id": "VARCHAR(100)",
+        },
+        "form_submissions": {
+            "submission_token": "VARCHAR(36)",
+            "token_expires_at": "TIMESTAMP",
+            "evaluator_email": "VARCHAR(300)",
+            "form_snapshot": "JSON",
+        },
+    }
     insp = sa_inspect(engine)
-    try:
-        cols = {c["name"] for c in insp.get_columns("assessments")}
-    except Exception:
-        return
-    if "application_id" not in cols:
-        with engine.begin() as conn:
-            conn.execute(text("ALTER TABLE assessments ADD COLUMN application_id VARCHAR(100)"))
+    for table, cols in required.items():
+        try:
+            existing = {c["name"] for c in insp.get_columns(table)}
+        except Exception:
+            continue  # table doesn't exist yet — create_all handles it
+        for name, ddl in cols.items():
+            if name not in existing:
+                try:
+                    with engine.begin() as conn:
+                        conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {name} {ddl}"))
+                except Exception:
+                    pass  # never block startup on a best-effort backfill
 
 
 _ensure_schema()
