@@ -21,6 +21,24 @@ from app.api.sync import router as sync_router
 
 Base.metadata.create_all(bind=engine)
 
+
+def _ensure_schema():
+    """Idempotent column adds for tables that predate a new field.
+    create_all() creates missing tables but never ALTERs existing ones, so new
+    columns on already-deployed tables need an explicit, safe ADD COLUMN."""
+    from sqlalchemy import inspect as sa_inspect, text
+    insp = sa_inspect(engine)
+    try:
+        cols = {c["name"] for c in insp.get_columns("assessments")}
+    except Exception:
+        return
+    if "application_id" not in cols:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE assessments ADD COLUMN application_id VARCHAR(100)"))
+
+
+_ensure_schema()
+
 app = FastAPI(
     title="QCI Unified Performance Management System",
     description="Multi-board assessor performance evaluation platform for NABL, NABH, NABCB, NABET",

@@ -33,7 +33,7 @@ def _gen_temp_password() -> str:
 def sync_assessors(
     board_id: str,
     data: AssessorSyncRequest,
-    current_user: User = Depends(require_board_access),
+    current_user: User = Depends(require_system_admin),  # bulk upload is system-admin only
     db: Session = Depends(get_db),
 ):
     board = db.query(Board).filter(
