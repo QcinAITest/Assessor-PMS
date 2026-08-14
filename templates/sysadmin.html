@@ -115,8 +115,8 @@
                             + Add Board Admin
                         </button>
                         <button @click="openSyncAssessors(board)"
-                                class="mt-1 w-full text-center text-xs text-[#5B6B82] hover:text-[#0A1628] dark:hover:text-white font-medium py-1.5 border border-dashed border-[#DDE3EC] dark:border-[#1A3352] rounded-lg hover:border-[#5B6B82] transition">
-                            ↑ Sync Assessors
+                                class="mt-1 w-full text-center text-xs text-[#1A6BBF] hover:text-white hover:bg-[#1A6BBF] dark:hover:text-white font-medium py-1.5 border border-[#1A6BBF] rounded-lg transition">
+                            ↑ Bulk Upload Assessors
                         </button>
                     </div>
                 </div>
@@ -304,10 +304,28 @@
     <!-- ── Sync Assessors Modal ─────────────────────────────────────────── -->
     <div x-show="showSyncAssessors" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" @click.self="showSyncAssessors=false; syncAssessorsResult=null; syncAssessorsError=''">
         <div class="bg-white dark:bg-[#0F2337] rounded-2xl shadow-2xl p-7 w-full max-w-lg max-h-[90vh] overflow-y-auto border border-[#DDE3EC] dark:border-[#1A3352]">
-            <h3 class="text-lg font-bold text-[#0A1628] dark:text-white mb-1">Sync Assessors</h3>
+            <h3 class="text-lg font-bold text-[#0A1628] dark:text-white mb-1">Bulk Upload Assessors</h3>
             <p class="text-xs text-[#5B6B82] mb-5" x-text="syncAssessorsBoard ? 'Board: ' + syncAssessorsBoard.code + ' – ' + syncAssessorsBoard.name : ''"></p>
 
             <div x-show="!syncAssessorsResult">
+                <!-- CSV file upload -->
+                <label class="block text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-1.5">Upload CSV file</label>
+                <div class="flex items-center justify-between gap-3">
+                    <input type="file" accept=".csv,text/csv" @change="handleAssessorFile($event)"
+                           class="block w-full text-xs text-[#5B6B82] file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-[#071B2F] file:text-white hover:file:bg-[#0D2F52] file:cursor-pointer">
+                    <button type="button" @click="downloadAssessorTemplate()" class="whitespace-nowrap text-xs text-[#1A6BBF] hover:text-[#0D2F52] font-medium">Download template</button>
+                </div>
+                <p class="mt-1.5 text-xs text-[#5B6B82]">Columns: <code>employee_id</code>, <code>name</code>, <code>email</code>, <code>role_id</code> (employee_id and name required).</p>
+                <p x-show="syncAssessorsFileCount > 0" class="mt-1 text-xs text-green-600 dark:text-green-400">
+                    ✓ Parsed <strong x-text="syncAssessorsFileCount"></strong> assessor(s) from <span x-text="syncAssessorsFileName"></span> — review below and Run Sync.
+                </p>
+
+                <div class="flex items-center my-4">
+                    <div class="flex-1 border-t border-[#DDE3EC] dark:border-[#1A3352]"></div>
+                    <span class="px-3 text-xs text-[#5B6B82] uppercase">or paste JSON</span>
+                    <div class="flex-1 border-t border-[#DDE3EC] dark:border-[#1A3352]"></div>
+                </div>
+
                 <label class="block text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-1.5">
                     JSON payload
                     <span class="text-[#5B6B82] font-normal normal-case ml-1">(array of assessor objects)</span>
@@ -566,7 +584,7 @@ function sysAdminApp() {
         showEditBoard: false, editBoardId: null, editBoardData: {}, editBoardError: '',
         showDeactivateBoard: false, deactivateBoardTarget: null, deactivateBoardError: '',
         // Sync state
-        showSyncAssessors: false, syncAssessorsBoard: null, syncAssessorsJson: '', syncAssessorsDeactivate: false, syncAssessorsResult: null, syncAssessorsError: '',
+        showSyncAssessors: false, syncAssessorsBoard: null, syncAssessorsJson: '', syncAssessorsDeactivate: false, syncAssessorsResult: null, syncAssessorsError: '', syncAssessorsFileName: '', syncAssessorsFileCount: 0,
         showSyncUsers: false, syncUsersJson: '', syncUsersResult: null, syncUsersError: '',
 
         get sysAdmins() { return this.users.filter(u => u.role === 'SYSTEM_ADMIN'); },
@@ -709,7 +727,79 @@ function sysAdminApp() {
             this.syncAssessorsDeactivate = false;
             this.syncAssessorsResult = null;
             this.syncAssessorsError = '';
+            this.syncAssessorsFileName = '';
+            this.syncAssessorsFileCount = 0;
             this.showSyncAssessors = true;
+        },
+        // Minimal RFC-4180-ish CSV parser: handles quoted fields and embedded commas/quotes.
+        _parseCsv(text) {
+            const lines = String(text).replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n').filter(l => l.trim().length);
+            if (!lines.length) return { headers: [], rows: [] };
+            const parseLine = (line) => {
+                const out = []; let cur = '', inQ = false;
+                for (let i = 0; i < line.length; i++) {
+                    const c = line[i];
+                    if (inQ) {
+                        if (c === '"' && line[i + 1] === '"') { cur += '"'; i++; }
+                        else if (c === '"') inQ = false;
+                        else cur += c;
+                    } else if (c === '"') inQ = true;
+                    else if (c === ',') { out.push(cur); cur = ''; }
+                    else cur += c;
+                }
+                out.push(cur);
+                return out.map(s => s.trim());
+            };
+            const headers = parseLine(lines[0]).map(h => h.toLowerCase());
+            const rows = [];
+            for (let i = 1; i < lines.length; i++) {
+                const vals = parseLine(lines[i]);
+                const obj = {};
+                headers.forEach((h, idx) => obj[h] = (vals[idx] ?? '').trim());
+                rows.push(obj);
+            }
+            return { headers, rows };
+        },
+        handleAssessorFile(ev) {
+            this.syncAssessorsError = '';
+            this.syncAssessorsFileName = '';
+            this.syncAssessorsFileCount = 0;
+            const file = ev.target.files && ev.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = () => {
+                try {
+                    const { headers, rows } = this._parseCsv(reader.result);
+                    if (!headers.includes('employee_id') || !headers.includes('name')) {
+                        this.syncAssessorsError = 'CSV must include at least "employee_id" and "name" columns.';
+                        return;
+                    }
+                    const assessors = rows
+                        .filter(r => (r.employee_id || '').length && (r.name || '').length)
+                        .map(r => {
+                            const o = { employee_id: r.employee_id, name: r.name };
+                            if (r.email) o.email = r.email;
+                            if (r.role_id) o.role_id = r.role_id;
+                            return o;
+                        });
+                    if (!assessors.length) { this.syncAssessorsError = 'No valid rows found (each needs employee_id and name).'; return; }
+                    this.syncAssessorsJson = JSON.stringify(assessors, null, 2);
+                    this.syncAssessorsFileName = file.name;
+                    this.syncAssessorsFileCount = assessors.length;
+                } catch (e) {
+                    this.syncAssessorsError = 'Could not parse the CSV file.';
+                }
+            };
+            reader.readAsText(file);
+        },
+        downloadAssessorTemplate() {
+            const csv = 'employee_id,name,email,role_id\nEMP001,Dr. Ravi Kumar,ravi@qci.org,ROLE_PA\nEMP002,Priya Singh,priya@qci.org,ROLE_COASS\n';
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = 'assessors_template.csv';
+            document.body.appendChild(a); a.click(); a.remove();
+            URL.revokeObjectURL(url);
         },
         async runSyncAssessors() {
             this.syncAssessorsError = '';
