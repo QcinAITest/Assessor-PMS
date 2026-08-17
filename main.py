@@ -43,6 +43,16 @@ def _ensure_schema():
             "form_snapshot": "JSON",
         },
     }
+    # Free-text columns that were originally VARCHAR(n) and overflowed on Postgres
+    # (e.g. an auto-generated parameter code longer than 50 chars). Converting to
+    # TEXT removes the length limit for good. Postgres-only: VARCHAR->TEXT is a
+    # cheap metadata change; SQLite ignores length so it needs nothing.
+    to_text = {
+        "parameters": ["code", "label"],
+        "essential_criteria": ["code", "label"],
+        "form_templates": ["name"],
+        "assessments": ["organization_name", "scheme", "standard_version"],
+    }
     insp = sa_inspect(engine)
     for table, cols in required.items():
         try:
@@ -56,6 +66,21 @@ def _ensure_schema():
                         conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {name} {ddl}"))
                 except Exception:
                     pass  # never block startup on a best-effort backfill
+    if engine.dialect.name == "postgresql":
+        for table, cols in to_text.items():
+            try:
+                colinfo = {c["name"]: c["type"] for c in insp.get_columns(table)}
+            except Exception:
+                continue
+            for name in cols:
+                t = colinfo.get(name)
+                # length is not None => still a VARCHAR(n); TEXT reports length None.
+                if t is not None and getattr(t, "length", None) is not None:
+                    try:
+                        with engine.begin() as conn:
+                            conn.execute(text(f"ALTER TABLE {table} ALTER COLUMN {name} TYPE TEXT"))
+                    except Exception:
+                        pass
 
 
 _ensure_schema()
