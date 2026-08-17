@@ -83,7 +83,7 @@ class FormTemplate(Base):
     id = Column(String(36), primary_key=True)
     board_id = Column(String(36), ForeignKey("boards.id", ondelete="CASCADE"), nullable=False)
     code = Column(String(50), nullable=False)
-    name = Column(String(300), nullable=False)
+    name = Column(Text, nullable=False)
     description = Column(Text)
     stakeholder_weight = Column(Float, nullable=False, doc="Decimal, e.g. 0.30 = 30%")
     target_evaluator_role = Column(String(50), doc="Which role fills this form")
@@ -113,8 +113,8 @@ class Parameter(Base):
     form_template_id = Column(String(36), ForeignKey("form_templates.id", ondelete="CASCADE"), nullable=False)
     parent_id = Column(String(36), ForeignKey("parameters.id", ondelete="CASCADE"), nullable=True,
                        doc="NULL = top-level parameter; non-null = sub-parameter")
-    code = Column(String(50), nullable=False)
-    label = Column(String(500), nullable=False)
+    code = Column(Text, nullable=False, doc="Auto-generated from the label; free-text length")
+    label = Column(Text, nullable=False)
     description = Column(Text)
     weight = Column(Float, nullable=False, default=0, doc="Weight within parent group, 0-100")
     data_type = Column(String(30), nullable=False, default="RATING_1_5",
@@ -143,8 +143,8 @@ class EssentialCriterion(Base):
 
     id = Column(String(36), primary_key=True)
     form_template_id = Column(String(36), ForeignKey("form_templates.id", ondelete="CASCADE"), nullable=False)
-    code = Column(String(50), nullable=False)
-    label = Column(String(500), nullable=False)
+    code = Column(Text, nullable=False, doc="Auto-generated from the label; free-text length")
+    label = Column(Text, nullable=False)
     sort_order = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -207,9 +207,9 @@ class Assessment(Base):
     application_id = Column(String(100), doc="External application ID / reference number from the portal")
     assessment_type = Column(String(50), nullable=False,
                              doc="Initial | Surveillance | Re-assessment | Extension | Onsite")
-    organization_name = Column(String(500))
-    scheme = Column(String(200))
-    standard_version = Column(String(200))
+    organization_name = Column(Text)
+    scheme = Column(Text)
+    standard_version = Column(Text)
     assessment_date = Column(DateTime, nullable=False)
     status = Column(String(30), default="IN_PROGRESS",
                     doc="IN_PROGRESS | PENDING_FEEDBACK | SCORED | CLOSED")
