@@ -625,6 +625,7 @@ def _param_tree(p: Parameter):
     return {
         "id": p.id, "code": p.code, "label": p.label, "weight": p.weight,
         "data_type": p.data_type, "is_mandatory": p.is_mandatory,
+        "applies_to_roles": p.applies_to_roles or [],
         "children": [_param_tree(c) for c in (p.children or [])],
     }
 

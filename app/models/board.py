@@ -122,6 +122,9 @@ class Parameter(Base):
     options = Column(JSONB, doc="For DROPDOWN: list of options. For RATING: scale config.")
     is_mandatory = Column(Boolean, default=True)
     sort_order = Column(Integer, default=0)
+    applies_to_roles = Column(JSONB, nullable=True,
+                              doc="List of system_role_ids this question/area applies to. "
+                                  "NULL or empty = applies to all roles.")
 
     form_template = relationship("FormTemplate", back_populates="parameters")
     parent = relationship("Parameter", remote_side="Parameter.id", back_populates="children")
@@ -228,6 +231,9 @@ class FormSubmission(Base):
     form_template_id = Column(String(36), ForeignKey("form_templates.id"), nullable=False)
     evaluator_id = Column(String(36), ForeignKey("assessors.id"), nullable=True)
     evaluee_id = Column(String(36), ForeignKey("assessors.id"), nullable=True)
+    evaluee_role = Column(String(50), nullable=True,
+                          doc="Role allocated to the evaluee for THIS assessment (per-assessment, "
+                              "from the portal team allocation). Falls back to the assessor's role.")
     status = Column(String(30), default="CREATED",
                     doc="CREATED | SENT | PENDING | SUBMITTED | COMPLETED | FLAGGED")
     responses = Column(JSONB, nullable=False, default=dict,

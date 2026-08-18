@@ -153,6 +153,7 @@
                                     <span class="font-medium text-gray-600 dark:text-gray-400" x-text="'Weight: ' + param.weight + '%'"></span>
                                     <span x-show="param.data_type !== 'CALCULATED'" class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 dark:text-gray-400 rounded" x-text="friendlyType(param.data_type)"></span>
                                     <span x-show="param.data_type === 'CALCULATED'" class="px-1.5 py-0.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded text-xs">Auto-scored from sub-questions</span>
+                                    <span x-show="(param.applies_to_roles || []).length" class="px-1.5 py-0.5 bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded" x-text="'Roles: ' + roleTagLabels(param)"></span>
                                 </div>
                             </div>
                         </div>
@@ -183,6 +184,7 @@
                                         <div class="flex items-center space-x-2 text-xs text-gray-400 dark:text-gray-500 mt-0.5">
                                             <span class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded" x-text="friendlyType(sub.data_type)"></span>
                                             <span x-show="sub.is_mandatory" class="px-1.5 py-0.5 bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-400 rounded">Required</span>
+                                            <span x-show="(sub.applies_to_roles || []).length" class="px-1.5 py-0.5 bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded" x-text="roleTagLabels(sub)"></span>
                                         </div>
                                     </div>
                                 </div>
@@ -408,6 +410,26 @@
                               class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform shadow"></span>
                     </button>
                 </div>
+
+                <!-- Applies to roles — for both areas and questions -->
+                <div x-show="boardRoles.length">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                        Applies to roles
+                        <span class="text-gray-400 dark:text-gray-500 font-normal ml-1">(leave all unticked = shows for every role)</span>
+                    </label>
+                    <div class="flex flex-wrap gap-2">
+                        <template x-for="r in boardRoles" :key="r.system_role_id">
+                            <button type="button" @click="toggleParamRole(r.system_role_id)"
+                                    :class="(newParam.applies_to_roles || []).includes(r.system_role_id)
+                                        ? 'border-qci-accent bg-blue-50 dark:bg-blue-900/30 text-qci-accent ring-1 ring-blue-200 dark:ring-blue-800'
+                                        : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-gray-300'"
+                                    class="border rounded-full px-3 py-1 text-xs font-medium transition dark:bg-gray-700">
+                                <span x-text="r.display_label"></span>
+                            </button>
+                        </template>
+                    </div>
+                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-1.5">Role for each assessment comes from the portal team allocation; only the selected roles will see this item.</p>
+                </div>
             </div>
 
             <!-- Validation error -->
@@ -610,14 +632,14 @@
 <script>
 function formBuilder(boardCode, formId) {
     return {
-        boardCode, boardId: '',
+        boardCode, formId, boardId: '', boardRoles: [],
         form: { name: '', parameters: [], essential_criteria: [], stakeholder_weight: 0, is_mandatory: false },
         showAddParam: false, showAddEssential: false,
         showEditEssential: false, editEssentialId: null, editEssential: {}, editEssentialError: '',
         paramError: '', essentialError: '', saving: false, newParamParentLabel: '',
         editingParamId: null,
         showHistory: false, historyVersions: [], historySnapshot: null,
-        newParam: { code: '', label: '', weight: 10, data_type: 'RATING_1_5', is_mandatory: true, parent_id: null, sort_order: 0 },
+        newParam: { code: '', label: '', weight: 10, data_type: 'RATING_1_5', is_mandatory: true, parent_id: null, sort_order: 0, applies_to_roles: [] },
         newEssential: { code: '', label: '' },
 
         paramColors:  ['bg-blue-500', 'bg-emerald-500', 'bg-orange-500', 'bg-purple-500', 'bg-pink-500', 'bg-teal-500', 'bg-indigo-500', 'bg-rose-500'],
@@ -671,6 +693,7 @@ function formBuilder(boardCode, formId) {
                 is_mandatory: true,
                 parent_id: parentId,
                 sort_order: 0,
+                applies_to_roles: [],
             };
             this.newParamParentLabel = parentId
                 ? (this.topParams.find(p => p.id === parentId)?.label || 'Selected Area')
@@ -693,6 +716,7 @@ function formBuilder(boardCode, formId) {
                 is_mandatory: !!param.is_mandatory,
                 parent_id: parentId,
                 sort_order: param.sort_order || 0,
+                applies_to_roles: Array.isArray(param.applies_to_roles) ? [...param.applies_to_roles] : [],
             };
             this.newParamParentLabel = parentId
                 ? (this.topParams.find(p => p.id === parentId)?.label || 'Selected Area')
@@ -706,10 +730,25 @@ function formBuilder(boardCode, formId) {
                 const board = await api.get('/api/v1/boards/' + boardCode);
                 if (!board?.id) return;
                 this.boardId = board.id;
+                this.boardRoles = board.roles || [];
                 await this.reload();
             } catch (e) {
                 console.error('Form builder init failed:', e);
             }
+        },
+
+        // Toggle a role tag on the item being added/edited.
+        toggleParamRole(roleId) {
+            const arr = this.newParam.applies_to_roles || [];
+            const i = arr.indexOf(roleId);
+            if (i === -1) arr.push(roleId); else arr.splice(i, 1);
+            this.newParam.applies_to_roles = arr;
+        },
+        // Short label list for a role-tagged item (used for the badge on the list).
+        roleTagLabels(param) {
+            const ids = param.applies_to_roles || [];
+            if (!ids.length) return '';
+            return ids.map(id => (this.boardRoles.find(r => r.system_role_id === id)?.display_label) || id).join(', ');
         },
 
         async openHistory() {

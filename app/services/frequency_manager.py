@@ -22,18 +22,24 @@ def evaluate_triggers(
     board: Board,
     assessment: Assessment,
     evaluee: Assessor,
+    role_override: Optional[str] = None,
 ) -> List[dict]:
     """
     Given a completed assessment, determine which feedback forms must be generated
     for the given evaluee based on the board's frequency rules.
 
+    role_override: the role allocated to the evaluee for THIS assessment (from the
+    portal team allocation). When given, frequency rules are matched against it
+    instead of the assessor's global role.
+
     Returns list of { form_template_id, reason } for forms that should be created.
     """
+    match_role = role_override or evaluee.role_id
     rules = (
         db.query(FrequencyRule)
         .filter(
             FrequencyRule.board_id == board.id,
-            FrequencyRule.role_id == evaluee.role_id,
+            FrequencyRule.role_id == match_role,
             FrequencyRule.is_active == True,
         )
         .all()
@@ -152,6 +158,7 @@ def create_pending_submissions(
     evaluee: Assessor,
     forms_to_generate: List[dict],
     board: Optional[Board] = None,
+    evaluee_role: Optional[str] = None,
 ) -> List[FormSubmission]:
     """Create CREATED-status form submissions for each triggered form.
 
@@ -177,6 +184,7 @@ def create_pending_submissions(
             form_template_id=item["form_template_id"],
             evaluator_id=evaluee.id,
             evaluee_id=evaluee.id,
+            evaluee_role=evaluee_role or evaluee.role_id,  # per-assessment role, fallback to global
             status="CREATED",
             responses={},
             submission_token=str(uuid.uuid4()),

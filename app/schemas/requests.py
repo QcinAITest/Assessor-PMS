@@ -47,6 +47,7 @@ class ParameterCreate(BaseModel):
     is_mandatory: bool = True
     parent_id: Optional[str] = None
     sort_order: int = 0
+    applies_to_roles: Optional[List[str]] = None  # empty/None = applies to all roles
 
 
 class EssentialCriterionCreate(BaseModel):

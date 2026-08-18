@@ -222,8 +222,6 @@ async def _handle_assessment_complete(db: Session, board: Board, payload: dict) 
     from app.services.webhook_service import fire_webhooks
 
     assessment_id = payload.get("assessment_id")
-    evaluee_ids = payload.get("evaluee_ids", [])
-
     if not assessment_id:
         raise ValueError("assessment_id is required for ASSESSMENT_COMPLETE")
 
@@ -231,19 +229,52 @@ async def _handle_assessment_complete(db: Session, board: Board, payload: dict) 
     if not assessment:
         raise ValueError(f"Assessment '{assessment_id}' not found")
 
+    # Role map from the portal adapter: translate the portal's role code -> internal role_id.
+    role_map = {}
+    portal_id = payload.get("portal_id")
+    if portal_id:
+        adapter = db.query(PortalAdapter).filter(
+            PortalAdapter.board_id == board.id,
+            PortalAdapter.portal_id == portal_id,
+            PortalAdapter.is_active == True,
+        ).first()
+        if adapter and adapter.role_map:
+            role_map = adapter.role_map
+
+    # New format: evaluees=[{employee_id, role}] with a per-assessment role.
+    # Legacy format: evaluee_ids=[...] (role falls back to the assessor's global role).
+    team = payload.get("evaluees")
+    if team is None:
+        team = [{"id": eid} for eid in payload.get("evaluee_ids", [])]
+
     results = []
-    for eid in evaluee_ids:
-        evaluee = db.query(Assessor).filter(Assessor.id == eid).first()
+    for member in team:
+        emp = member.get("employee_id")
+        aid = member.get("id")
+        if emp:
+            evaluee = db.query(Assessor).filter(
+                Assessor.board_id == board.id, Assessor.employee_id == emp
+            ).first()
+        elif aid:
+            evaluee = db.query(Assessor).filter(Assessor.id == aid).first()
+        else:
+            evaluee = None
         if not evaluee:
-            results.append({"evaluee_id": eid, "error": "Assessor not found"})
+            results.append({"evaluee": emp or aid, "error": "Assessor not found"})
             continue
 
+        # Per-assessment role from the payload (translated), else the assessor's global role.
+        raw_role = member.get("role")
+        evaluee_role = (role_map.get(raw_role, raw_role) if raw_role else None) or evaluee.role_id
+
         increment_audit_count(db, evaluee)
-        forms_needed = evaluate_triggers(db, board, assessment, evaluee)
-        created = create_pending_submissions(db, assessment, evaluee, forms_needed, board=board)
+        forms_needed = evaluate_triggers(db, board, assessment, evaluee, role_override=evaluee_role)
+        created = create_pending_submissions(db, assessment, evaluee, forms_needed,
+                                             board=board, evaluee_role=evaluee_role)
 
         results.append({
-            "evaluee_id": eid,
+            "evaluee_id": evaluee.id,
+            "role": evaluee_role,
             "audit_count": evaluee.audit_count,
             "forms_generated": len(created),
             "form_ids": [s.id for s in created],
