@@ -41,6 +41,10 @@ def _ensure_schema():
             "token_expires_at": "TIMESTAMP",
             "evaluator_email": "VARCHAR(300)",
             "form_snapshot": "JSON",
+            "evaluee_role": "VARCHAR(50)",
+        },
+        "parameters": {
+            "applies_to_roles": "JSON",
         },
     }
     # Free-text columns that were originally VARCHAR(n) and overflowed on Postgres

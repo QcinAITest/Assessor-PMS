@@ -322,6 +322,8 @@ def get_public_form(token: str, db: Session = Depends(get_db)):
     ft = sub.form_template
     evaluee = sub.evaluee
     assessment = sub.assessment
+    # Per-assessment role (from the portal team allocation), fallback to the assessor's role.
+    role = sub.evaluee_role or (evaluee.role_id if evaluee else None)
 
     return {
         "already_submitted": False,
@@ -329,10 +331,10 @@ def get_public_form(token: str, db: Session = Depends(get_db)):
         "form_name": ft.name,
         "form_code": ft.code,
         "evaluee_name": evaluee.name if evaluee else "—",
-        "evaluee_role": evaluee.role_id if evaluee else "—",
+        "evaluee_role": role or "—",
         "assessment_type": assessment.assessment_type if assessment else "—",
         "organization_name": assessment.organization_name if assessment else "—",
-        "parameters": _format_params(ft.parameters),
+        "parameters": _format_params(ft.parameters, role=role),
         "essential_criteria": [
             {"code": ec.code, "label": ec.label} for ec in ft.essential_criteria
         ],
@@ -379,10 +381,23 @@ def submit_public_form(
     }
 
 
-def _format_params(parameters) -> list:
+def _role_applies(param, role) -> bool:
+    """A question/area applies when it has no role tags (applies to all) or its
+    tag list includes the evaluee's per-assessment role."""
+    roles = getattr(param, "applies_to_roles", None) or []
+    return (not roles) or (role is not None and role in roles)
+
+
+def _format_params(parameters, role=None) -> list:
     top = [p for p in parameters if p.parent_id is None]
     result = []
     for p in sorted(top, key=lambda x: x.sort_order):
+        if not _role_applies(p, role):
+            continue
+        subs = [c for c in sorted(p.children or [], key=lambda x: x.sort_order) if _role_applies(c, role)]
+        # An area that has questions but none apply to this role is hidden entirely.
+        if (p.children) and not subs:
+            continue
         result.append({
             "id": p.id,
             "code": p.code,
@@ -399,7 +414,7 @@ def _format_params(parameters) -> list:
                     "is_mandatory": c.is_mandatory,
                     "options": c.options,
                 }
-                for c in sorted(p.children or [], key=lambda x: x.sort_order)
+                for c in subs
             ],
         })
     return result
