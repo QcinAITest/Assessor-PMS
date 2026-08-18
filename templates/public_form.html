@@ -327,7 +327,13 @@ function publicForm(token, previewMode, previewBoardCode, previewFormId) {
                         evaluee_role: ft.target_evaluator_role || '—',
                         assessment_type: '—',
                         organization_name: '',
-                        parameters: ft.parameters,
+                        // /forms/{id} returns nested params under `children`; the fill template
+                        // expects `sub_parameters`, so map it. Preview shows all questions
+                        // regardless of role tags.
+                        parameters: (ft.parameters || []).map(p => ({
+                            ...p,
+                            sub_parameters: (p.children || []).map(c => ({ ...c })),
+                        })),
                         essential_criteria: ft.essential_criteria,
                     };
                     this._initResponses(this.form);
