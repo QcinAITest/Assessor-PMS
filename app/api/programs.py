@@ -382,10 +382,17 @@ def submit_public_form(
 
 
 def _role_applies(param, role) -> bool:
-    """A question/area applies when it has no role tags (applies to all) or its
-    tag list includes the evaluee's per-assessment role."""
+    """A question/area applies when:
+      - it has no role tags (applies to everyone), OR
+      - there is no role context (role is None — e.g. a manual 'Copy Link' with no
+        evaluee/allocation, or a preview): show the whole form rather than hiding
+        role-tagged items, OR
+      - its tag list includes the evaluee's per-assessment role.
+    """
     roles = getattr(param, "applies_to_roles", None) or []
-    return (not roles) or (role is not None and role in roles)
+    if not roles or role is None:
+        return True
+    return role in roles
 
 
 def _format_params(parameters, role=None) -> list:
