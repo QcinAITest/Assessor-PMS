@@ -6,20 +6,43 @@ Step 1: create_all() — creates any tables that don't exist yet (safe on existi
 Step 2: ALTER TABLE   — adds any columns added after initial table creation
 """
 import os
+import urllib.parse
 from datetime import datetime
+from dotenv import load_dotenv
+
+load_dotenv(override=True)
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./qci_pms.db")
+
+
+def _clean_db_url(url: str) -> str:
+    if url.startswith("postgresql://") or url.startswith("postgres://"):
+        scheme, rest = url.split("://", 1)
+        if "@" in rest:
+            last_at_idx = rest.rfind("@")
+            user_pass = rest[:last_at_idx]
+            host_db = rest[last_at_idx + 1 :]
+            if ":" in user_pass:
+                user, password = user_pass.split(":", 1)
+                password = urllib.parse.quote_plus(urllib.parse.unquote(password))
+                return f"{scheme}://{user}:{password}@{host_db}"
+    return url
+
+
+DATABASE_URL = _clean_db_url(DATABASE_URL)
 IS_POSTGRES = DATABASE_URL.startswith("postgresql") or DATABASE_URL.startswith("postgres")
 
 
 def _create_all_tables():
     """Use SQLAlchemy to create all tables defined in models (idempotent — skips existing)."""
     from app.database import engine, Base
-    import app.models.auth   # noqa: F401 — registers User model
-    import app.models.board  # noqa: F401 — registers all board models
-    import app.models.program  # noqa: F401 — registers ServiceLine, Program
+    import app.models.auth            # noqa: F401
+    import app.models.board           # noqa: F401
+    import app.models.program         # noqa: F401
+    import app.models.raw_submission  # noqa: F401
     Base.metadata.create_all(bind=engine)
     print("Tables created / verified via SQLAlchemy.")
+
 
 
 def migrate():
@@ -186,7 +209,32 @@ def _migrate_postgres():
             CREATE UNIQUE INDEX IF NOT EXISTS uq_assessor_board_employee
             ON assessors(board_id, employee_id)
         """)
-        print("assessors: employee_id unique → composite (board_id, employee_id)")
+        print("assessors: employee_id unique -> composite (board_id, employee_id)")
+
+    # --- raw_form_submissions ---
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS raw_form_submissions (
+            id SERIAL PRIMARY KEY,
+            legacy_id INT NULL,
+            board_code VARCHAR(20) DEFAULT 'NABH',
+            user_name VARCHAR(255) NULL,
+            role VARCHAR(100) NULL,
+            hospital_name VARCHAR(500) NULL,
+            other_remark TEXT NULL,
+            form_data JSONB NOT NULL,
+            raw_payload JSONB NULL,
+            submitted_at TIMESTAMP NULL,
+            is_processed BOOLEAN DEFAULT FALSE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE INDEX IF NOT EXISTS idx_raw_submissions_board ON raw_form_submissions(board_code);
+        CREATE INDEX IF NOT EXISTS idx_raw_submissions_role ON raw_form_submissions(role);
+        CREATE INDEX IF NOT EXISTS idx_raw_submissions_user_name ON raw_form_submissions(user_name);
+        CREATE INDEX IF NOT EXISTS idx_raw_submissions_legacy_id ON raw_form_submissions(legacy_id);
+        CREATE INDEX IF NOT EXISTS idx_raw_submissions_submitted_at ON raw_form_submissions(submitted_at);
+        CREATE INDEX IF NOT EXISTS idx_raw_submissions_is_processed ON raw_form_submissions(is_processed);
+    """)
+    print("raw_form_submissions: verified table & indexes (PostgreSQL)")
 
     conn.commit()
     cur.close()
@@ -367,6 +415,31 @@ def _migrate_sqlite():
             ALTER TABLE assessors_new RENAME TO assessors;
         """)
         print("assessors: recreated with composite UNIQUE(board_id, employee_id)")
+
+    # --- raw_form_submissions ---
+    cur.executescript("""
+        CREATE TABLE IF NOT EXISTS raw_form_submissions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            legacy_id INTEGER NULL,
+            board_code VARCHAR(20) DEFAULT 'NABH',
+            user_name VARCHAR(255) NULL,
+            role VARCHAR(100) NULL,
+            hospital_name VARCHAR(500) NULL,
+            other_remark TEXT NULL,
+            form_data JSON NOT NULL,
+            raw_payload JSON NULL,
+            submitted_at DATETIME NULL,
+            is_processed BOOLEAN DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE INDEX IF NOT EXISTS idx_raw_submissions_board ON raw_form_submissions(board_code);
+        CREATE INDEX IF NOT EXISTS idx_raw_submissions_role ON raw_form_submissions(role);
+        CREATE INDEX IF NOT EXISTS idx_raw_submissions_user_name ON raw_form_submissions(user_name);
+        CREATE INDEX IF NOT EXISTS idx_raw_submissions_legacy_id ON raw_form_submissions(legacy_id);
+        CREATE INDEX IF NOT EXISTS idx_raw_submissions_submitted_at ON raw_form_submissions(submitted_at);
+        CREATE INDEX IF NOT EXISTS idx_raw_submissions_is_processed ON raw_form_submissions(is_processed);
+    """)
+    print("raw_form_submissions: verified table & indexes (SQLite)")
 
     conn.commit()
     conn.execute("PRAGMA foreign_keys = ON")
