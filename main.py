@@ -116,61 +116,61 @@ templates = Jinja2Templates(directory="templates")
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request})
+    return templates.TemplateResponse(request=request, name="login.html")
 
 
 @app.get("/", response_class=HTMLResponse)
 async def dashboard(request: Request):
-    return templates.TemplateResponse("dashboard.html", {"request": request})
+    return templates.TemplateResponse(request=request, name="dashboard.html")
 
 
 @app.get("/sysadmin", response_class=HTMLResponse)
 async def sysadmin(request: Request):
-    return templates.TemplateResponse("sysadmin.html", {"request": request})
+    return templates.TemplateResponse(request=request, name="sysadmin.html")
 
 
 @app.get("/board/{board_code}", response_class=HTMLResponse)
 async def board_admin(request: Request, board_code: str):
-    return templates.TemplateResponse("board_admin.html", {
-        "request": request, "board_code": board_code
+    return templates.TemplateResponse(request=request, name="board_admin.html", context={
+        "board_code": board_code
     })
 
 
 @app.get("/board/{board_code}/form/{form_id}", response_class=HTMLResponse)
 async def form_builder(request: Request, board_code: str, form_id: str):
-    return templates.TemplateResponse("form_builder.html", {
-        "request": request, "board_code": board_code, "form_id": form_id
+    return templates.TemplateResponse(request=request, name="form_builder.html", context={
+        "board_code": board_code, "form_id": form_id
     })
 
 
 @app.get("/board/{board_code}/scoring", response_class=HTMLResponse)
 async def scoring_dashboard(request: Request, board_code: str):
-    return templates.TemplateResponse("scoring.html", {
-        "request": request, "board_code": board_code
+    return templates.TemplateResponse(request=request, name="scoring.html", context={
+        "board_code": board_code
     })
 
 
 @app.get("/board/{board_code}/assessors/{assessor_id}", response_class=HTMLResponse)
 async def assessor_profile(request: Request, board_code: str, assessor_id: str):
     """Performance card — longitudinal score history for a single assessor."""
-    return templates.TemplateResponse("assessor_profile.html", {
-        "request": request, "board_code": board_code, "assessor_id": assessor_id
+    return templates.TemplateResponse(request=request, name="assessor_profile.html", context={
+        "board_code": board_code, "assessor_id": assessor_id
     })
 
 
 @app.get("/forms/{token}", response_class=HTMLResponse)
 async def public_form_page(request: Request, token: str):
     """Public, no-auth form fill page — sent as a link to assessors."""
-    return templates.TemplateResponse("public_form.html", {
-        "request": request, "token": token, "preview_mode": False
+    return templates.TemplateResponse(request=request, name="public_form.html", context={
+        "token": token, "preview_mode": False
     })
 
 
 @app.get("/board/{board_code}/form/{form_id}/preview", response_class=HTMLResponse)
 async def form_preview(request: Request, board_code: str, form_id: str):
     """Read-only preview of a form template — used by board admins before distribution."""
-    return templates.TemplateResponse("public_form.html", {
-        "request": request, "token": "", "preview_mode": True,
+    return templates.TemplateResponse(request=request, name="public_form.html", context={
+        "token": "", "preview_mode": True,
         "preview_board_code": board_code, "preview_form_id": form_id
     })
 
