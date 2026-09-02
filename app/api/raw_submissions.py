@@ -4,15 +4,26 @@ Raw Form Submissions API.
 Allows storing, retrieving, and managing un-normalized or legacy JSON feedback forms
 without requiring complex multi-table relational decomposition.
 """
+import re
+import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field, ConfigDict
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, desc
 
 from app.database import get_db
+from app.models.board import (
+    Board, BoardRole, Assessor, Assessment, FormSubmission, FormTemplate,
+    AuditScore, CumulativeRating
+)
 from app.models.raw_submission import RawFormSubmission
+from app.services.scoring_engine import (
+    calculate_final_audit_score,
+    calculate_cumulative_rating,
+    get_star_rating,
+)
 
 router = APIRouter(prefix="/api/v1/raw-submissions", tags=["Raw Submissions"])
 
@@ -118,11 +129,229 @@ class RawSubmissionUpdate(BaseModel):
 # Endpoints                                                                   #
 # --------------------------------------------------------------------------- #
 
+def parse_rating_value(val: Any) -> float:
+    """Coerce string ratings (e.g. 'poor', 'good', 'fair', 'verygood', 'excellent') or numbers to 1.0 - 5.0 scale."""
+    if val is None:
+        return 3.0
+    if isinstance(val, (int, float)):
+        return min(5.0, max(1.0, float(val)))
+    if isinstance(val, str):
+        normalized = val.strip().lower().replace(" ", "").replace("_", "").replace("-", "")
+        if normalized in ("excellent", "5", "5.0"):
+            return 5.0
+        elif normalized in ("verygood", "4", "4.0"):
+            return 4.0
+        elif normalized in ("fair", "3", "3.0"):
+            return 3.0
+        elif normalized in ("good", "2", "2.0"):
+            return 2.0
+        elif normalized in ("poor", "1", "1.0"):
+            return 1.0
+        try:
+            num = float(val)
+            return min(5.0, max(1.0, num))
+        except ValueError:
+            pass
+    return 3.0
+
+
+def _score_raw_matrix(form_data: Any) -> float:
+    """
+    Computes score from 2D section matrix or list of question ratings.
+    Level 1: Computes average for each section.
+    Level 2: Averages across all sections to get the form score (1.0 to 5.0).
+    """
+    if not isinstance(form_data, list) or not form_data:
+        return 0.0
+
+    section_scores = []
+    for section in form_data:
+        if isinstance(section, list) and section:
+            q_scores = [parse_rating_value(item.get("rating")) for item in section if isinstance(item, dict)]
+            if q_scores:
+                section_scores.append(sum(q_scores) / len(q_scores))
+        elif isinstance(section, dict):
+            val = parse_rating_value(section.get("rating"))
+            section_scores.append(val)
+
+    if not section_scores:
+        return 0.0
+
+    return round(sum(section_scores) / len(section_scores), 4)
+
+
+def _normalize_name_to_email(name: str, domain: str = "nabh-assessor.in") -> str:
+    clean = re.sub(r'^(dr|ms|mr|mrs|prof)\.?\s*', '', name.strip(), flags=re.IGNORECASE)
+    clean = re.sub(r'[^a-zA-Z0-9]+', '.', clean).strip('.').lower()
+    return f"{clean}@{domain}" if clean else f"assessor.{uuid.uuid4().hex[:6]}@{domain}"
+
+
+def _get_or_create_assessor(db: Session, board: Board, user_name: str, role_name: Optional[str] = None) -> Assessor:
+    """Finds existing assessor by name and board, or creates a new one."""
+    user_name = user_name.strip()
+    assessor = db.query(Assessor).filter(
+        Assessor.board_id == board.id,
+        Assessor.name.ilike(user_name)
+    ).first()
+
+    if assessor:
+        return assessor
+
+    # Map role or fallback to default
+    system_role_id = "ROLE_PA"
+    if role_name:
+        role_obj = db.query(BoardRole).filter(
+            BoardRole.board_id == board.id,
+            (BoardRole.display_label.ilike(f"%{role_name}%")) | (BoardRole.system_role_id.ilike(f"%{role_name}%"))
+        ).first()
+        if role_obj:
+            system_role_id = role_obj.system_role_id
+
+    # Generate unique employee_id
+    count = db.query(Assessor).filter(Assessor.board_id == board.id).count() + 1
+    emp_id = f"{board.code}-{count:04d}"
+    email = _normalize_name_to_email(user_name, f"{board.code.lower()}-assessor.in")
+
+    assessor = Assessor(
+        id=str(uuid.uuid4()),
+        board_id=board.id,
+        employee_id=emp_id,
+        name=user_name,
+        email=email,
+        role_id=system_role_id,
+        is_active=True,
+        audit_count=0
+    )
+    db.add(assessor)
+    db.flush()
+    return assessor
+
+
+def _ensure_board_and_template(db: Session, board_code: str = "NABH") -> Tuple[Board, FormTemplate]:
+    """Ensures that the requested board and a default form template exist in the database."""
+    board = db.query(Board).filter((Board.code == board_code) | (Board.id == board_code)).first()
+    if not board:
+        board = Board(
+            id=str(uuid.uuid4()),
+            code=board_code,
+            name=f"{board_code} Board",
+            is_active=True,
+            config={
+                "rating_engine": "numeric",
+                "cumulative_window": 10,
+                "star_bands": [
+                    {"min": 4.5, "stars": 5},
+                    {"min": 4.0, "stars": 4},
+                    {"min": 3.5, "stars": 3},
+                    {"min": 3.0, "stars": 2},
+                    {"min": 0.0, "stars": 1},
+                ],
+            }
+        )
+        db.add(board)
+        db.flush()
+
+    form_template = db.query(FormTemplate).filter(FormTemplate.board_id == board.id).first()
+    if not form_template:
+        form_template = FormTemplate(
+            id=str(uuid.uuid4()),
+            board_id=board.id,
+            code=f"F_{board_code}_FEEDBACK",
+            name=f"{board_code} Assessor Feedback Form",
+            stakeholder_weight=1.0,
+            is_mandatory=True,
+            is_active=True,
+            version=1
+        )
+        db.add(form_template)
+        db.flush()
+
+    return board, form_template
+
+
+def process_raw_submission_to_scorecard(db: Session, raw_sub: RawFormSubmission) -> Optional[dict]:
+    """
+    Processes a raw form submission into:
+    1. Assessor account (if not already present)
+    2. Assessment & FormSubmission records
+    3. Final AuditScore (Level 3)
+    4. CumulativeRating (Level 4)
+    """
+    if not raw_sub.user_name or not raw_sub.user_name.strip():
+        return None
+
+    board_code = raw_sub.board_code or "NABH"
+    board, form_template = _ensure_board_and_template(db, board_code)
+
+    # 1. Get or create Assessor
+    assessor = _get_or_create_assessor(db, board, raw_sub.user_name, raw_sub.role)
+
+    # 2. Compute score from 2D raw array
+    form_score = _score_raw_matrix(raw_sub.form_data)
+
+    # 4. Create Assessment
+    sub_date = raw_sub.submitted_at or datetime.now(timezone.utc)
+    app_id = f"RAW-{raw_sub.legacy_id or raw_sub.id or uuid.uuid4().hex[:6]}"
+    
+    assessment = Assessment(
+        id=str(uuid.uuid4()),
+        board_id=board.id,
+        application_id=app_id,
+        assessment_type="Surveillance",
+        organization_name=raw_sub.hospital_name or "Assessment Hospital",
+        assessment_date=sub_date,
+        status="SCORED"
+    )
+    db.add(assessment)
+    db.flush()
+
+    # 5. Create FormSubmission
+    submission = FormSubmission(
+        id=str(uuid.uuid4()),
+        assessment_id=assessment.id,
+        form_template_id=form_template.id,
+        evaluee_id=assessor.id,
+        form_score=form_score,
+        essential_flag=False,
+        status="SUBMITTED",
+        submitted_at=sub_date,
+        responses={"raw_data": raw_sub.form_data}
+    )
+    db.add(submission)
+    db.flush()
+
+    # 6. Calculate Final Audit Score (Scorecard)
+    audit_score = calculate_final_audit_score(db, assessment.id, assessor.id, board)
+
+    # 7. Update Cumulative Rating and Assessor Audit Count
+    audit_count = db.query(AuditScore).filter(AuditScore.evaluee_id == assessor.id).count()
+    assessor.audit_count = audit_count
+    cum_rating = calculate_cumulative_rating(db, assessor.id, board)
+
+    raw_sub.is_processed = True
+    db.commit()
+
+    return {
+        "assessor_id": assessor.id,
+        "assessor_name": assessor.name,
+        "employee_id": assessor.employee_id,
+        "assessment_id": assessment.id,
+        "form_score": form_score,
+        "final_score": audit_score.final_score if audit_score else form_score,
+        "star_rating": audit_score.star_rating if audit_score else 1,
+        "cumulative_score": cum_rating.cumulative_score if cum_rating else form_score,
+    }
+
+
+# --------------------------------------------------------------------------- #
+# Endpoints                                                                   #
+# --------------------------------------------------------------------------- #
+
 @router.post(
     "",
     status_code=status.HTTP_201_CREATED,
     summary="Save raw form submission(s) (Single or Bulk)",
-    description="Accepts either a single JSON object or a JSON array of submissions.",
+    description="Accepts either a single JSON object or a JSON array of submissions. Automatically creates assessor accounts and computes scorecards.",
 )
 async def create_raw_submissions(
     request: Request,
@@ -182,10 +411,51 @@ async def create_raw_submissions(
     db.add_all(saved_records)
     db.commit()
 
+    # Automatically process valid raw submissions into Assessors & Scorecards
+    processed_results = []
+    for rec in saved_records:
+        if rec.user_name and not rec.is_processed:
+            res = process_raw_submission_to_scorecard(db, rec)
+            if res:
+                processed_results.append(res)
+
     return {
         "status": "success",
-        "message": "Successfully created"
+        "message": f"Successfully created {len(saved_records)} submission(s)",
+        "saved_count": len(saved_records),
+        "saved_ids": [r.id for r in saved_records],
+        "processed_scorecards": processed_results
     }
+
+
+@router.post(
+    "/process-all",
+    summary="Process all unprocessed raw submissions into Assessors and Scorecards",
+)
+def process_all_raw_submissions(db: Session = Depends(get_db)):
+    unprocessed = db.query(RawFormSubmission).filter(
+        RawFormSubmission.is_processed == False,  # noqa: E712
+        RawFormSubmission.user_name != None,  # noqa: E711
+        RawFormSubmission.user_name != ""
+    ).all()
+
+    results = []
+    for raw in unprocessed:
+        try:
+            res = process_raw_submission_to_scorecard(db, raw)
+            if res:
+                results.append(res)
+        except Exception as e:
+            db.rollback()
+            print(f"Error processing raw submission {raw.id}: {e}")
+
+    return {
+        "status": "success",
+        "total_unprocessed_found": len(unprocessed),
+        "processed_count": len(results),
+        "results": results
+    }
+
 
 
 @router.get(
