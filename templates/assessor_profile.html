@@ -16,22 +16,27 @@
     <!-- Loading -->
     <div x-show="loading" class="flex items-center justify-center py-24">
         <div class="text-center">
-            <div class="inline-block w-8 h-8 border-4 border-[#1A6BBF] border-t-transparent rounded-full animate-spin mb-4"></div>
+            <div
+                class="inline-block w-8 h-8 border-4 border-[#1A6BBF] border-t-transparent rounded-full animate-spin mb-4">
+            </div>
             <p class="text-[#5B6B82] text-sm">Loading performance data…</p>
         </div>
     </div>
 
     <!-- Error state -->
-    <div x-show="!loading && error" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-8 text-center">
+    <div x-show="!loading && error"
+        class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-8 text-center">
         <p class="text-red-700 dark:text-red-300 font-medium" x-text="error"></p>
-        <a :href="'/board/' + boardCode" class="mt-4 inline-block text-sm text-[#1A6BBF] hover:underline">← Back to board</a>
+        <a :href="'/board/' + boardCode" class="mt-4 inline-block text-sm text-[#1A6BBF] hover:underline">← Back to
+            board</a>
     </div>
 
     <!-- Main content -->
     <div x-show="!loading && assessor" class="space-y-5">
 
         <!-- ── Header Card ──────────────────────────────────────────────── -->
-        <div class="bg-white dark:bg-[#0F2337] rounded-xl border border-[#DDE3EC] dark:border-[#1A3352] shadow-sm overflow-hidden">
+        <div
+            class="bg-white dark:bg-[#0F2337] rounded-xl border border-[#DDE3EC] dark:border-[#1A3352] shadow-sm overflow-hidden">
             <!-- Colored top stripe -->
             <div class="h-1.5 w-full" :class="boardColor(boardCode)"></div>
             <div class="p-6">
@@ -39,30 +44,35 @@
                     <div class="flex items-center space-x-5">
                         <!-- Avatar initials -->
                         <div class="w-16 h-16 rounded-xl flex items-center justify-center text-white text-2xl font-bold flex-shrink-0"
-                             :class="boardColor(boardCode)">
+                            :class="boardColor(boardCode)">
                             <span x-text="(assessor?.name || '?')[0].toUpperCase()"></span>
                         </div>
                         <div>
-                            <h1 class="text-2xl font-bold text-[#0A1628] dark:text-white leading-tight" x-text="assessor?.name"></h1>
+                            <h1 class="text-2xl font-bold text-[#0A1628] dark:text-white leading-tight"
+                                x-text="assessor?.name"></h1>
                             <p class="text-sm text-[#5B6B82] mt-0.5"
-                               x-text="(assessor?.role_label || assessor?.role_id) + ' · ' + (assessor?.board_name || boardCode)"></p>
+                                x-text="(assessor?.role_label || assessor?.role_id) + ' · ' + (assessor?.board_name || boardCode)">
+                            </p>
                             <div class="flex flex-wrap items-center gap-2 mt-2.5">
-                                <span class="text-xs px-2.5 py-1 rounded-full bg-[#F4F6F9] dark:bg-[#1A3352] text-[#5B6B82] dark:text-[#8BA0B8] font-mono border border-[#DDE3EC] dark:border-[#1A3352]"
-                                      x-text="'EMP: ' + assessor?.employee_id"></span>
+                                <span
+                                    class="text-xs px-2.5 py-1 rounded-full bg-[#F4F6F9] dark:bg-[#1A3352] text-[#5B6B82] dark:text-[#8BA0B8] font-mono border border-[#DDE3EC] dark:border-[#1A3352]"
+                                    x-text="'EMP: ' + assessor?.employee_id"></span>
                                 <span x-show="assessor?.email"
-                                      class="text-xs px-2.5 py-1 rounded-full bg-[#F4F6F9] dark:bg-[#1A3352] text-[#5B6B82] dark:text-[#8BA0B8] border border-[#DDE3EC] dark:border-[#1A3352]"
-                                      x-text="assessor?.email"></span>
+                                    class="text-xs px-2.5 py-1 rounded-full bg-[#F4F6F9] dark:bg-[#1A3352] text-[#5B6B82] dark:text-[#8BA0B8] border border-[#DDE3EC] dark:border-[#1A3352]"
+                                    x-text="assessor?.email"></span>
                                 <span class="text-xs px-2.5 py-1 rounded-full font-semibold"
-                                      :class="assessor?.is_active
+                                    :class="assessor?.is_active
                                           ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
                                           : 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800'"
-                                      x-text="assessor?.is_active ? 'Active' : 'Inactive'"></span>
+                                    x-text="assessor?.is_active ? 'Active' : 'Inactive'"></span>
                             </div>
                         </div>
                     </div>
                     <!-- Audit count stat -->
-                    <div class="text-center bg-[#F4F6F9] dark:bg-[#071B2F] rounded-xl px-8 py-4 border border-[#DDE3EC] dark:border-[#1A3352]">
-                        <div class="text-3xl font-bold text-[#0A1628] dark:text-white" x-text="assessor?.audit_count ?? '—'"></div>
+                    <div
+                        class="text-center bg-[#F4F6F9] dark:bg-[#071B2F] rounded-xl px-8 py-4 border border-[#DDE3EC] dark:border-[#1A3352]">
+                        <div class="text-3xl font-bold text-[#0A1628] dark:text-white"
+                            x-text="assessor?.audit_count ?? '—'"></div>
                         <div class="text-xs text-[#5B6B82] mt-1 font-medium uppercase tracking-wide">Total Audits</div>
                     </div>
                 </div>
@@ -72,39 +82,44 @@
         <!-- ── Summary Row: Cumulative Rating + Latest Score + Essential Flags ── -->
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <!-- Cumulative Score -->
-            <div class="bg-white dark:bg-[#0F2337] rounded-xl border border-[#DDE3EC] dark:border-[#1A3352] shadow-sm p-6 text-center">
+            <div
+                class="bg-white dark:bg-[#0F2337] rounded-xl border border-[#DDE3EC] dark:border-[#1A3352] shadow-sm p-6 text-center">
                 <p class="text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-3">Cumulative Score</p>
                 <div class="text-4xl font-bold text-[#0A1628] dark:text-white"
-                     x-text="cumulative ? cumulative.cumulative_score.toFixed(2) : '—'"></div>
-                <div class="mt-2.5 flex justify-center" x-html="cumulative ? starHtml(cumulative.star_rating) : '<span class=\'text-[#5B6B82] text-sm\'>No data yet</span>'"></div>
+                    x-text="cumulative ? cumulative.cumulative_score.toFixed(2) : '—'"></div>
+                <div class="mt-2.5 flex justify-center"
+                    x-html="cumulative ? starHtml(cumulative.star_rating) : '<span class=\'text-[#5B6B82] text-sm\'>No data yet</span>'">
+                </div>
                 <p class="text-xs text-[#5B6B82] mt-2"
-                   x-text="cumulative ? 'Over last ' + cumulative.window_size + ' audit(s)' : 'No data yet'"></p>
+                    x-text="cumulative ? 'Over last ' + cumulative.window_size + ' audit(s)' : 'No data yet'"></p>
             </div>
 
             <!-- Latest Score -->
-            <div class="bg-white dark:bg-[#0F2337] rounded-xl border border-[#DDE3EC] dark:border-[#1A3352] shadow-sm p-6 text-center">
+            <div
+                class="bg-white dark:bg-[#0F2337] rounded-xl border border-[#DDE3EC] dark:border-[#1A3352] shadow-sm p-6 text-center">
                 <p class="text-xs font-semibold text-[#5B6B82] uppercase tracking-wider mb-3">Latest Score</p>
                 <div class="text-4xl font-bold"
-                     :class="latestScore ? scoreColor(latestScore.final_score) : 'text-[#5B6B82]'"
-                     x-text="latestScore ? latestScore.final_score.toFixed(2) : '—'"></div>
-                <div class="mt-2.5 flex justify-center" x-html="latestScore ? starHtml(latestScore.star_rating) : '<span class=\'text-[#5B6B82] text-sm\'>No audits yet</span>'"></div>
+                    :class="latestScore ? scoreColor(latestScore.final_score) : 'text-[#5B6B82]'"
+                    x-text="latestScore ? latestScore.final_score.toFixed(2) : '—'"></div>
+                <div class="mt-2.5 flex justify-center"
+                    x-html="latestScore ? starHtml(latestScore.star_rating) : '<span class=\'text-[#5B6B82] text-sm\'>No audits yet</span>'">
+                </div>
                 <p class="text-xs text-[#5B6B82] mt-2"
-                   x-text="latestScore ? (latestScore.assessment_date || '') : 'No audits yet'"></p>
+                    x-text="latestScore ? (latestScore.assessment_date || '') : 'No audits yet'"></p>
             </div>
 
             <!-- Essential Flags -->
-            <div class="rounded-xl border shadow-sm p-6 text-center"
-                 :class="cumulative?.has_essential_flags
+            <div class="rounded-xl border shadow-sm p-6 text-center" :class="cumulative?.has_essential_flags
                      ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
                      : 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800'">
                 <p class="text-xs font-semibold uppercase tracking-wider mb-3"
-                   :class="cumulative?.has_essential_flags ? 'text-red-500 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'">
+                    :class="cumulative?.has_essential_flags ? 'text-red-500 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'">
                     Essential Criteria
                 </p>
                 <div class="text-3xl" x-text="cumulative?.has_essential_flags ? '⚠️' : '✅'"></div>
                 <p class="text-xs mt-2.5 font-medium"
-                   :class="cumulative?.has_essential_flags ? 'text-red-700 dark:text-red-300' : 'text-emerald-700 dark:text-emerald-300'"
-                   x-text="cumulative?.has_essential_flags
+                    :class="cumulative?.has_essential_flags ? 'text-red-700 dark:text-red-300' : 'text-emerald-700 dark:text-emerald-300'"
+                    x-text="cumulative?.has_essential_flags
                        ? flagCount + ' flag(s) in window'
                        : 'All clear in window'">
                 </p>
@@ -118,12 +133,15 @@
                     <h2 class="text-base font-semibold text-[#0A1628] dark:text-white">Score Trend</h2>
                     <p class="text-xs text-[#5B6B82] mt-0.5">Audit score history over time</p>
                 </div>
-                <span class="text-xs text-[#5B6B82] bg-[#F4F6F9] dark:bg-[#071B2F] px-3 py-1.5 rounded-full border border-[#DDE3EC] dark:border-[#1A3352]"
-                      x-text="scoreHistory.length + ' audit(s) shown'"></span>
+                <span
+                    class="text-xs text-[#5B6B82] bg-[#F4F6F9] dark:bg-[#071B2F] px-3 py-1.5 rounded-full border border-[#DDE3EC] dark:border-[#1A3352]"
+                    x-text="scoreHistory.length + ' audit(s) shown'"></span>
             </div>
-            <div x-show="scoreHistory.length === 0" class="flex flex-col items-center justify-center h-40 text-[#5B6B82] text-sm">
+            <div x-show="scoreHistory.length === 0"
+                class="flex flex-col items-center justify-center h-40 text-[#5B6B82] text-sm">
                 <svg class="w-10 h-10 mb-3 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                 </svg>
                 No audit scores recorded yet.
             </div>
@@ -133,8 +151,10 @@
         </div>
 
         <!-- ── Audit History Table ─────────────────────────────────────── -->
-        <div class="bg-white dark:bg-[#0F2337] rounded-xl border border-[#DDE3EC] dark:border-[#1A3352] shadow-sm overflow-hidden">
-            <div class="px-6 py-4 border-b border-[#DDE3EC] dark:border-[#1A3352] bg-[#F8FAFC] dark:bg-[#071B2F] flex items-center justify-between">
+        <div
+            class="bg-white dark:bg-[#0F2337] rounded-xl border border-[#DDE3EC] dark:border-[#1A3352] shadow-sm overflow-hidden">
+            <div
+                class="px-6 py-4 border-b border-[#DDE3EC] dark:border-[#1A3352] bg-[#F8FAFC] dark:bg-[#071B2F] flex items-center justify-between">
                 <div>
                     <h2 class="text-sm font-semibold text-[#0A1628] dark:text-white">Audit History</h2>
                     <p class="text-xs text-[#5B6B82] mt-0.5">Complete record of all assessments</p>
@@ -149,15 +169,23 @@
             <div x-show="scoreHistory.length > 0" class="overflow-x-auto">
                 <table class="min-w-full text-sm">
                     <thead>
-                        <tr class="bg-[#F8FAFC] dark:bg-[#071B2F] text-left border-b border-[#DDE3EC] dark:border-[#1A3352]">
+                        <tr
+                            class="bg-[#F8FAFC] dark:bg-[#071B2F] text-left border-b border-[#DDE3EC] dark:border-[#1A3352]">
                             <th class="px-4 py-3 text-xs font-semibold text-[#5B6B82] uppercase tracking-wider">#</th>
-                            <th class="px-4 py-3 text-xs font-semibold text-[#5B6B82] uppercase tracking-wider">Date</th>
-                            <th class="px-4 py-3 text-xs font-semibold text-[#5B6B82] uppercase tracking-wider">Organization</th>
-                            <th class="px-4 py-3 text-xs font-semibold text-[#5B6B82] uppercase tracking-wider">Type</th>
-                            <th class="px-4 py-3 text-xs font-semibold text-[#5B6B82] uppercase tracking-wider">Score</th>
-                            <th class="px-4 py-3 text-xs font-semibold text-[#5B6B82] uppercase tracking-wider">Stars</th>
-                            <th class="px-4 py-3 text-xs font-semibold text-[#5B6B82] uppercase tracking-wider">Essential</th>
-                            <th class="px-4 py-3 text-xs font-semibold text-[#5B6B82] uppercase tracking-wider">Form Breakdown</th>
+                            <th class="px-4 py-3 text-xs font-semibold text-[#5B6B82] uppercase tracking-wider">Date
+                            </th>
+                            <th class="px-4 py-3 text-xs font-semibold text-[#5B6B82] uppercase tracking-wider">
+                                Organization</th>
+                            <th class="px-4 py-3 text-xs font-semibold text-[#5B6B82] uppercase tracking-wider">Type
+                            </th>
+                            <th class="px-4 py-3 text-xs font-semibold text-[#5B6B82] uppercase tracking-wider">Score
+                            </th>
+                            <th class="px-4 py-3 text-xs font-semibold text-[#5B6B82] uppercase tracking-wider">Stars
+                            </th>
+                            <th class="px-4 py-3 text-xs font-semibold text-[#5B6B82] uppercase tracking-wider">
+                                Essential</th>
+                            <th class="px-4 py-3 text-xs font-semibold text-[#5B6B82] uppercase tracking-wider">Form
+                                Breakdown</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-[#EEF2F7] dark:divide-[#1A3352]">
@@ -168,44 +196,45 @@
                                 <td class="px-4 py-3 text-[#5B6B82] text-xs whitespace-nowrap"
                                     x-text="s.assessment_date || fmtDate(s.calculated_at)"></td>
                                 <td class="px-4 py-3 text-[#0A1628] dark:text-white font-medium max-w-[180px] truncate"
-                                    :title="s.organization_name || '—'"
-                                    x-text="s.organization_name || '—'"></td>
+                                    :title="s.organization_name || '—'" x-text="s.organization_name || '—'"></td>
                                 <td class="px-4 py-3">
-                                    <span class="px-2 py-0.5 rounded text-xs font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
-                                          x-text="s.assessment_type || '—'"></span>
+                                    <span
+                                        class="px-2 py-0.5 rounded text-xs font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
+                                        x-text="s.assessment_type || '—'"></span>
                                 </td>
                                 <td class="px-4 py-3">
-                                    <span class="text-base font-bold"
-                                          :class="scoreColor(s.final_score)"
-                                          x-text="s.final_score.toFixed(2)"></span>
+                                    <span class="text-base font-bold" :class="scoreColor(s.final_score)"
+                                        x-text="s.final_score.toFixed(2)"></span>
                                 </td>
                                 <td class="px-4 py-3" x-html="starHtml(s.star_rating)"></td>
                                 <td class="px-4 py-3">
                                     <span x-show="s.essential_flag"
-                                          class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800">
+                                        class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800">
                                         FLAGGED
                                     </span>
                                     <span x-show="!s.essential_flag"
-                                          class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                                        class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                                         OK
                                     </span>
                                 </td>
                                 <td class="px-4 py-3">
                                     <div x-show="s.form_scores && Object.keys(s.form_scores).length > 0"
-                                         class="space-y-0.5">
-                                        <template x-for="[code, data] in Object.entries(s.form_scores || {})" :key="code">
+                                        class="space-y-0.5">
+                                        <template x-for="[code, data] in Object.entries(s.form_scores || {})"
+                                            :key="code">
                                             <div class="flex items-center space-x-1 text-xs">
-                                                <span class="font-mono text-[#5B6B82] w-16 truncate" x-text="code"></span>
+                                                <span class="font-mono text-[#5B6B82] w-16 truncate"
+                                                    x-text="code"></span>
                                                 <span class="text-[#5B6B82]">→</span>
                                                 <span class="font-semibold text-[#0A1628] dark:text-white"
-                                                      x-text="data.score?.toFixed(2)"></span>
+                                                    x-text="data.score?.toFixed(2)"></span>
                                                 <span class="text-[#5B6B82] text-xs"
-                                                      x-text="'×' + Math.round((data.weight||0)*100) + '%'"></span>
+                                                    x-text="'×' + Math.round((data.weight||0)*100) + '%'"></span>
                                             </div>
                                         </template>
                                     </div>
                                     <span x-show="!s.form_scores || Object.keys(s.form_scores).length === 0"
-                                          class="text-[#5B6B82] text-xs">—</span>
+                                        class="text-[#5B6B82] text-xs">—</span>
                                 </td>
                             </tr>
                         </template>
@@ -217,9 +246,9 @@
         <!-- ── Back link ──────────────────────────────────────────────── -->
         <div class="pb-4">
             <a :href="'/board/' + boardCode + '/scoring'"
-               class="inline-flex items-center space-x-1.5 text-sm text-[#1A6BBF] hover:underline">
+                class="inline-flex items-center space-x-1.5 text-sm text-[#1A6BBF] hover:underline">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                 </svg>
                 <span>Back to Scoring Dashboard</span>
             </a>
@@ -234,145 +263,145 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
 <script>
-function assessorProfileApp(assessorId, boardCode) {
-    return {
-        assessorId,
-        boardCode,
-        assessor: null,
-        cumulative: null,
-        scoreHistory: [],
-        loading: true,
-        error: null,
-        // NOTE: chart instance is stored on the canvas DOM element (_chartInst)
-        // NOT here, because Alpine's Proxy wrapping causes infinite recursion in Chart.js
+    function assessorProfileApp(assessorId, boardCode) {
+        return {
+            assessorId,
+            boardCode,
+            assessor: null,
+            cumulative: null,
+            scoreHistory: [],
+            loading: true,
+            error: null,
+            // NOTE: chart instance is stored on the canvas DOM element (_chartInst)
+            // NOT here, because Alpine's Proxy wrapping causes infinite recursion in Chart.js
 
-        get latestScore() {
-            return this.scoreHistory.length > 0
-                ? this.scoreHistory[this.scoreHistory.length - 1]
-                : null;
-        },
+            get latestScore() {
+                return this.scoreHistory.length > 0
+                    ? this.scoreHistory[this.scoreHistory.length - 1]
+                    : null;
+            },
 
-        get flagCount() {
-            return this.scoreHistory.filter(s => s.essential_flag).length;
-        },
+            get flagCount() {
+                return this.scoreHistory.filter(s => s.essential_flag).length;
+            },
 
-        async init() {
-            try {
-                // Parallel fetch of assessor detail + cumulative + history
-                const [assessorData, cumulativeData, historyData] = await Promise.all([
-                    api.get('/api/v1/assessors/' + this.assessorId),
-                    api.get('/api/v1/assessors/' + this.assessorId + '/cumulative-rating'),
-                    api.get('/api/v1/assessors/' + this.assessorId + '/score-history'),
-                ]);
-                this.assessor   = assessorData;
-                this.cumulative = cumulativeData?.cumulative_score !== undefined ? cumulativeData : null;
-                this.scoreHistory = asList(historyData);
-            } catch (e) {
-                this.error = e.message || 'Failed to load assessor data.';
-            } finally {
-                this.loading = false;
-            }
+            async init() {
+                try {
+                    // Parallel fetch of assessor detail + cumulative + history
+                    const [assessorData, cumulativeData, historyData] = await Promise.all([
+                        api.get('/api/v1/assessors/' + this.assessorId),
+                        api.get('/api/v1/assessors/' + this.assessorId + '/cumulative-rating'),
+                        api.get('/api/v1/assessors/' + this.assessorId + '/score-history'),
+                    ]);
+                    this.assessor = assessorData;
+                    this.cumulative = cumulativeData?.cumulative_score !== undefined ? cumulativeData : null;
+                    this.scoreHistory = asList(historyData);
+                } catch (e) {
+                    this.error = e.message || 'Failed to load assessor data.';
+                } finally {
+                    this.loading = false;
+                }
 
-            // Build chart after Alpine renders the canvas
-            if (this.scoreHistory.length > 0) {
-                this.$nextTick(() => this.buildChart());
-            }
-        },
+                // Build chart after Alpine renders the canvas
+                if (this.scoreHistory.length > 0) {
+                    this.$nextTick(() => this.buildChart());
+                }
+            },
 
-        buildChart() {
-            const self = this;   // capture for Chart.js callbacks
-            const isDark = document.documentElement.classList.contains('dark');
-            const canvas = document.getElementById('scoreTrendChart');
-            if (!canvas) return;
-            // Destroy previous instance stored on the DOM element (avoids Alpine Proxy conflict)
-            if (canvas._chartInst) { canvas._chartInst.destroy(); canvas._chartInst = null; }
+            buildChart() {
+                const self = this;   // capture for Chart.js callbacks
+                const isDark = document.documentElement.classList.contains('dark');
+                const canvas = document.getElementById('scoreTrendChart');
+                if (!canvas) return;
+                // Destroy previous instance stored on the DOM element (avoids Alpine Proxy conflict)
+                if (canvas._chartInst) { canvas._chartInst.destroy(); canvas._chartInst = null; }
 
-            const labels = this.scoreHistory.map((s, i) => {
-                const d = s.assessment_date || s.calculated_at?.slice(0, 10);
-                return d ? d : `Audit ${i + 1}`;
-            });
-            const scores = this.scoreHistory.map(s => s.final_score);
-            const flagged = this.scoreHistory.map(s => s.essential_flag);
+                const labels = this.scoreHistory.map((s, i) => {
+                    const d = s.assessment_date || s.calculated_at?.slice(0, 10);
+                    return d ? d : `Audit ${i + 1}`;
+                });
+                const scores = this.scoreHistory.map(s => s.final_score);
+                const flagged = this.scoreHistory.map(s => s.essential_flag);
 
-            const gridColor  = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
-            const textColor  = isDark ? '#9ca3af' : '#6b7280';
-            const lineColor  = '#2563eb';
-            const areaColor  = isDark ? 'rgba(37,99,235,0.15)' : 'rgba(37,99,235,0.08)';
-            const pointColor = flagged.map(f => f ? '#ef4444' : '#2563eb');
+                const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+                const textColor = isDark ? '#9ca3af' : '#6b7280';
+                const lineColor = '#2563eb';
+                const areaColor = isDark ? 'rgba(37,99,235,0.15)' : 'rgba(37,99,235,0.08)';
+                const pointColor = flagged.map(f => f ? '#ef4444' : '#2563eb');
 
-            canvas._chartInst = new Chart(canvas.getContext('2d'), {
-                type: 'line',
-                data: {
-                    labels,
-                    datasets: [{
-                        label: 'Audit Score',
-                        data: scores,
-                        borderColor: lineColor,
-                        backgroundColor: areaColor,
-                        borderWidth: 2,
-                        pointBackgroundColor: pointColor,
-                        pointBorderColor: pointColor,
-                        pointRadius: 5,
-                        pointHoverRadius: 7,
-                        fill: true,
-                        tension: 0.35,
-                    }],
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                label(ctx) {
-                                    const s = self.scoreHistory?.[ctx.dataIndex];
-                                    const flag = s?.essential_flag ? ' ⚠ FLAGGED' : '';
-                                    const org  = s?.organization_name ? ` — ${s.organization_name}` : '';
-                                    return `Score: ${ctx.raw.toFixed(2)}${flag}${org}`;
+                canvas._chartInst = new Chart(canvas.getContext('2d'), {
+                    type: 'line',
+                    data: {
+                        labels,
+                        datasets: [{
+                            label: 'Audit Score',
+                            data: scores,
+                            borderColor: lineColor,
+                            backgroundColor: areaColor,
+                            borderWidth: 2,
+                            pointBackgroundColor: pointColor,
+                            pointBorderColor: pointColor,
+                            pointRadius: 5,
+                            pointHoverRadius: 7,
+                            fill: true,
+                            tension: 0.35,
+                        }],
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label(ctx) {
+                                        const s = self.scoreHistory?.[ctx.dataIndex];
+                                        const flag = s?.essential_flag ? ' ⚠ FLAGGED' : '';
+                                        const org = s?.organization_name ? ` — ${s.organization_name}` : '';
+                                        return `Score: ${ctx.raw.toFixed(2)}${flag}${org}`;
+                                    },
                                 },
                             },
                         },
-                    },
-                    scales: {
-                        x: {
-                            ticks: { color: textColor, maxRotation: 45, font: { size: 11 } },
-                            grid: { color: gridColor },
+                        scales: {
+                            x: {
+                                ticks: { color: textColor, maxRotation: 45, font: { size: 11 } },
+                                grid: { color: gridColor },
+                            },
+                            y: {
+                                min: 0,
+                                max: this.assessor?.rating_engine === 'percentage' ? 100 : 5.5,
+                                ticks: { color: textColor, font: { size: 11 } },
+                                grid: { color: gridColor },
+                            },
                         },
-                        y: {
-                            min: 0,
-                            max: this.assessor?.rating_engine === 'percentage' ? 100 : 5.5,
-                            ticks: { color: textColor, font: { size: 11 } },
-                            grid: { color: gridColor },
-                        },
                     },
-                },
-            });
-        },
+                });
+            },
 
-        scoreColor(score) {
-            if (score === null || score === undefined) return 'text-gray-400 dark:text-gray-600';
-            const pct = this.assessor?.rating_engine === 'percentage'
-                ? score
-                : ((score - 1) / 4) * 100;
-            if (pct >= 80) return 'text-green-600 dark:text-green-400';
-            if (pct >= 60) return 'text-yellow-600 dark:text-yellow-400';
-            return 'text-red-600 dark:text-red-400';
-        },
+            scoreColor(score) {
+                if (score === null || score === undefined) return 'text-gray-400 dark:text-gray-600';
+                const pct = this.assessor?.rating_engine === 'percentage'
+                    ? score
+                    : ((score - 1) / 4) * 100;
+                if (pct >= 80) return 'text-green-600 dark:text-green-400';
+                if (pct >= 60) return 'text-yellow-600 dark:text-yellow-400';
+                return 'text-red-600 dark:text-red-400';
+            },
 
-        boardColor(code) {
-            return {
-                NABL: 'bg-blue-700',
-                NABH: 'bg-emerald-700',
-                NABCB: 'bg-orange-600',
-                NABET: 'bg-violet-700',
-            }[code] || 'bg-[#5B6B82]';
-        },
+            boardColor(code) {
+                return {
+                    NABL: 'bg-blue-700',
+                    NABH: 'bg-emerald-700',
+                    NABCB: 'bg-orange-600',
+                    NABET: 'bg-violet-700',
+                }[code] || 'bg-[#5B6B82]';
+            },
 
-        fmtDate(iso) {
-            if (!iso) return '—';
-            return new Date(iso).toLocaleDateString();
-        },
-    };
-}
+            fmtDate(iso) {
+                if (!iso) return '—';
+                return new Date(iso).toLocaleDateString();
+            },
+        };
+    }
 </script>
 {% endblock %}
