@@ -103,17 +103,28 @@ def deactivate_assessor(board_id: str, assessor_id: str, _: User = Depends(requi
 def list_assessments(
     board_id: str,
     skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=200),
+    limit: int = Query(10, ge=1, le=200),
     status: Optional[str] = Query(None),
     assessment_type: Optional[str] = Query(None),
+    search: Optional[str] = Query(None),
     _: User = Depends(require_board_access),
     db: Session = Depends(get_db),
 ):
+    from sqlalchemy import or_
     q = db.query(Assessment).filter(Assessment.board_id == board_id)
     if status:
         q = q.filter(Assessment.status == status)
     if assessment_type:
         q = q.filter(Assessment.assessment_type == assessment_type)
+    if search and search.strip():
+        term = f"%{search.strip()}%"
+        q = q.filter(
+            or_(
+                Assessment.organization_name.ilike(term),
+                Assessment.application_id.ilike(term),
+                Assessment.scheme.ilike(term),
+            )
+        )
     total = q.count()
     items = q.order_by(Assessment.assessment_date.desc()).offset(skip).limit(limit).all()
     return {"total": total, "skip": skip, "limit": limit, "items": [_assessment_dict(a) for a in items]}

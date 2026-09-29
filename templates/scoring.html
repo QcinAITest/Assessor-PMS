@@ -14,9 +14,18 @@
     </nav>
 
     <!-- Page header -->
-    <div class="mb-7">
-        <p class="text-xs font-semibold text-[#5B6B82] uppercase tracking-widest mb-1">Scoring Dashboard</p>
-        <h1 class="text-2xl font-bold text-[#0A1628] dark:text-white">Assessment Management</h1>
+    <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+            <p class="text-xs font-semibold text-[#5B6B82] uppercase tracking-widest mb-1"><span x-text="boardCode"></span> Performance Management</p>
+            <h1 class="text-2xl font-bold text-[#0A1628] dark:text-white">Assessments &amp; Scoring</h1>
+        </div>
+        <a :href="'/board/' + boardCode + '?tab=MIS%20Dashboard'"
+           class="inline-flex items-center space-x-1.5 px-4 py-2 bg-white dark:bg-[#0F2337] border border-[#DDE3EC] dark:border-[#1A3352] text-[#0A1628] dark:text-white text-xs font-semibold rounded-lg hover:border-[#1A6BBF] transition self-start sm:self-auto">
+            <svg class="w-4 h-4 text-[#00838F]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+            </svg>
+            <span>View <span x-text="boardCode"></span> MIS Analytics →</span>
+        </a>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -80,15 +89,49 @@
 
             <!-- Assessments List ──────────────────────────────────────── -->
             <div class="bg-white dark:bg-[#0F2337] rounded-xl border border-[#DDE3EC] dark:border-[#1A3352] shadow-sm overflow-hidden">
-                <div class="px-6 py-4 bg-[#F8FAFC] dark:bg-[#071B2F] border-b border-[#DDE3EC] dark:border-[#1A3352] flex items-center justify-between">
+                <div class="px-6 py-4 bg-[#F8FAFC] dark:bg-[#071B2F] border-b border-[#DDE3EC] dark:border-[#1A3352] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div>
-                        <h2 class="text-sm font-semibold text-[#0A1628] dark:text-white">Assessments</h2>
+                        <h2 class="text-sm font-semibold text-[#0A1628] dark:text-white flex items-center space-x-2">
+                            <span>Assessments</span>
+                            <span class="text-xs font-normal text-[#5B6B82] bg-white dark:bg-[#0F2337] border border-[#DDE3EC] dark:border-[#1A3352] px-2.5 py-0.5 rounded-full"
+                                  x-text="assessmentsTotal + ' total'"></span>
+                        </h2>
                         <p class="text-xs text-[#5B6B82] mt-0.5">Click "Select" to work with an assessment</p>
                     </div>
-                    <span class="text-xs text-[#5B6B82] bg-white dark:bg-[#0F2337] border border-[#DDE3EC] dark:border-[#1A3352] px-2.5 py-1 rounded-full"
-                          x-text="assessments.length + ' total'"></span>
+
+                    <!-- Search & Filter Controls -->
+                    <div class="flex flex-wrap items-center gap-2">
+                        <div class="relative">
+                            <input x-model="assessmentSearch" @input.debounce.300ms="onFilterChange()" type="text" placeholder="Search org or app ID…"
+                                   class="w-44 sm:w-48 text-xs bg-white dark:bg-[#0F2337] border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg pl-7 pr-6 py-1.5 text-[#0A1628] dark:text-white placeholder-[#8BA0B8] focus:ring-1 focus:ring-[#1A6BBF] outline-none">
+                            <svg class="w-3.5 h-3.5 absolute left-2 top-2 text-[#8BA0B8]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                            </svg>
+                            <button x-show="assessmentSearch" @click="assessmentSearch = ''; onFilterChange()" class="absolute right-2 top-1.5 text-[#8BA0B8] hover:text-[#0A1628] dark:hover:text-white text-xs">✕</button>
+                        </div>
+                        <select x-model="assessmentStatusFilter" @change="onFilterChange()"
+                                class="text-xs bg-white dark:bg-[#0F2337] border border-[#DDE3EC] dark:border-[#1A3352] rounded-lg px-2.5 py-1.5 text-[#0A1628] dark:text-white focus:ring-1 focus:ring-[#1A6BBF] outline-none">
+                            <option value="">All Statuses</option>
+                            <option value="IN_PROGRESS">In Progress</option>
+                            <option value="PENDING_FEEDBACK">Pending Feedback</option>
+                            <option value="SCORED">Scored</option>
+                            <option value="CLOSED">Closed</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="overflow-x-auto">
+
+                <div class="relative overflow-x-auto">
+                    <!-- Loading overlay -->
+                    <div x-show="assessmentsLoading" class="absolute inset-0 bg-white/60 dark:bg-[#0F2337]/60 flex items-center justify-center z-10">
+                        <div class="flex items-center space-x-2 text-xs font-semibold text-[#1A6BBF]">
+                            <svg class="animate-spin h-4 w-4 text-[#1A6BBF]" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                            </svg>
+                            <span>Loading assessments...</span>
+                        </div>
+                    </div>
+
                     <table class="min-w-full text-sm">
                         <thead>
                             <tr class="bg-[#F8FAFC] dark:bg-[#071B2F] text-left border-b border-[#DDE3EC] dark:border-[#1A3352]">
@@ -97,7 +140,7 @@
                                 <th class="px-4 py-3 text-xs font-semibold text-[#5B6B82] uppercase tracking-wider">Organization</th>
                                 <th class="px-4 py-3 text-xs font-semibold text-[#5B6B82] uppercase tracking-wider">Date</th>
                                 <th class="px-4 py-3 text-xs font-semibold text-[#5B6B82] uppercase tracking-wider">Status</th>
-                                <th class="px-4 py-3 text-xs font-semibold text-[#5B6B82] uppercase tracking-wider">Actions</th>
+                                <th class="px-4 py-3 text-xs font-semibold text-[#5B6B82] uppercase tracking-wider text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-[#EEF2F7] dark:divide-[#1A3352]">
@@ -107,7 +150,7 @@
                                     <td class="px-4 py-3 text-[#0A1628] dark:text-white font-medium" x-text="a.assessment_type"></td>
                                     <td class="px-4 py-3 text-[#5B6B82] dark:text-[#8BA0B8] text-xs font-mono" x-text="a.application_id || '—'"></td>
                                     <td class="px-4 py-3 text-[#5B6B82] dark:text-[#8BA0B8]" x-text="a.organization_name || '—'"></td>
-                                    <td class="px-4 py-3 text-[#5B6B82] text-xs whitespace-nowrap" x-text="new Date(a.assessment_date).toLocaleDateString()"></td>
+                                    <td class="px-4 py-3 text-[#5B6B82] text-xs whitespace-nowrap" x-text="a.assessment_date ? new Date(a.assessment_date).toLocaleDateString() : '—'"></td>
                                     <td class="px-4 py-3">
                                         <span class="px-2 py-0.5 rounded text-xs font-semibold border"
                                               :class="{
@@ -118,21 +161,78 @@
                                               }"
                                               x-text="a.status.replace(/_/g, ' ')"></span>
                                     </td>
-                                    <td class="px-4 py-3 whitespace-nowrap">
+                                    <td class="px-4 py-3 whitespace-nowrap text-right space-x-2">
                                         <button @click="selectedAssessment = a"
-                                                class="text-xs font-semibold text-[#1A6BBF] hover:underline">
+                                                class="text-xs font-semibold px-2.5 py-1 rounded bg-[#EBF3FC] dark:bg-[#153457] text-[#1A6BBF] dark:text-[#7CB5EC] hover:bg-[#1A6BBF] hover:text-white transition">
                                             Select
                                         </button>
                                         <button x-show="nextStatusLabel(a.status)" @click="transitionStatus(a)"
-                                                class="ml-3 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline"
+                                                class="text-xs font-semibold px-2.5 py-1 rounded bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-600 hover:text-white transition"
                                                 x-text="nextStatusLabel(a.status)"></button>
                                     </td>
                                 </tr>
                             </template>
                         </tbody>
                     </table>
-                    <div x-show="assessments.length === 0" class="text-center py-10 text-[#5B6B82] text-sm">
-                        No assessments yet. Create one above.
+                    <div x-show="!assessmentsLoading && assessments.length === 0" class="text-center py-10 text-[#5B6B82] text-sm">
+                        <span x-show="assessmentSearch || assessmentStatusFilter">No assessments match the selected filters.</span>
+                        <span x-show="!assessmentSearch && !assessmentStatusFilter">No assessments yet. Create one above.</span>
+                    </div>
+                </div>
+
+                <!-- Pagination Footer ───────────────────────────────────── -->
+                <div class="px-6 py-3.5 bg-[#F8FAFC] dark:bg-[#071B2F] border-t border-[#DDE3EC] dark:border-[#1A3352] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                    <div class="text-[#5B6B82] dark:text-[#8BA0B8]">
+                        <span x-show="assessmentsTotal > 0">
+                            Showing <strong class="text-[#0A1628] dark:text-white" x-text="startItem"></strong> to <strong class="text-[#0A1628] dark:text-white" x-text="endItem"></strong> of <strong class="text-[#0A1628] dark:text-white" x-text="assessmentsTotal"></strong> assessments
+                        </span>
+                        <span x-show="assessmentsTotal === 0">No records found</span>
+                    </div>
+
+                    <div class="flex items-center space-x-3">
+                        <!-- Per page dropdown -->
+                        <div class="flex items-center space-x-1.5">
+                            <span class="text-[#5B6B82] dark:text-[#8BA0B8]">Rows:</span>
+                            <select :value="assessmentsPageSize" @change="changePageSize($event.target.value)"
+                                    class="bg-white dark:bg-[#0F2337] border border-[#DDE3EC] dark:border-[#1A3352] rounded-md px-2 py-1 text-xs text-[#0A1628] dark:text-white outline-none focus:ring-1 focus:ring-[#1A6BBF]">
+                                <option value="5">5</option>
+                                <option value="10">10</option>
+                                <option value="20">20</option>
+                                <option value="50">50</option>
+                            </select>
+                        </div>
+
+                        <!-- Page navigation buttons -->
+                        <div class="flex items-center space-x-1" x-show="totalPages > 1">
+                            <button @click="prevPage()"
+                                    :disabled="assessmentsPage <= 1"
+                                    class="px-2.5 py-1 rounded border border-[#DDE3EC] dark:border-[#1A3352] bg-white dark:bg-[#0F2337] text-[#0A1628] dark:text-white font-medium hover:bg-[#EEF2F7] dark:hover:bg-[#1A3352] disabled:opacity-40 disabled:cursor-not-allowed transition">
+                                ‹ Prev
+                            </button>
+
+                            <template x-for="(p, idx) in pageNumbers" :key="idx">
+                                <div>
+                                    <template x-if="p === '...'">
+                                        <span class="px-2 py-1 text-[#5B6B82]">…</span>
+                                    </template>
+                                    <template x-if="p !== '...'">
+                                        <button @click="goToPage(p)"
+                                                class="px-2.5 py-1 rounded text-xs font-semibold transition"
+                                                :class="assessmentsPage === p
+                                                    ? 'bg-[#1A6BBF] text-white border border-[#1A6BBF]'
+                                                    : 'bg-white dark:bg-[#0F2337] border border-[#DDE3EC] dark:border-[#1A3352] text-[#0A1628] dark:text-white hover:bg-[#EEF2F7] dark:hover:bg-[#1A3352]'"
+                                                x-text="p">
+                                        </button>
+                                    </template>
+                                </div>
+                            </template>
+
+                            <button @click="nextPage()"
+                                    :disabled="assessmentsPage >= totalPages"
+                                    class="px-2.5 py-1 rounded border border-[#DDE3EC] dark:border-[#1A3352] bg-white dark:bg-[#0F2337] text-[#0A1628] dark:text-white font-medium hover:bg-[#EEF2F7] dark:hover:bg-[#1A3352] disabled:opacity-40 disabled:cursor-not-allowed transition">
+                                Next ›
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -448,6 +548,39 @@ function scoringApp(boardCode) {
         scoreEvalueeId: '',
         triggerAssessmentId: '', triggerEvalueeIds: [], triggerResult: null,
 
+        // Pagination & Filter State
+        assessmentsTotal: 0,
+        assessmentsPage: 1,
+        assessmentsPageSize: 10,
+        assessmentStatusFilter: '',
+        assessmentSearch: '',
+        assessmentsLoading: false,
+
+        get totalPages() {
+            return Math.max(1, Math.ceil(this.assessmentsTotal / this.assessmentsPageSize));
+        },
+        get startItem() {
+            if (this.assessmentsTotal === 0) return 0;
+            return (this.assessmentsPage - 1) * this.assessmentsPageSize + 1;
+        },
+        get endItem() {
+            return Math.min(this.assessmentsPage * this.assessmentsPageSize, this.assessmentsTotal);
+        },
+        get pageNumbers() {
+            const total = this.totalPages;
+            const current = this.assessmentsPage;
+            if (total <= 7) {
+                return Array.from({ length: total }, (_, i) => i + 1);
+            }
+            if (current <= 4) {
+                return [1, 2, 3, 4, 5, '...', total];
+            }
+            if (current >= total - 3) {
+                return [1, '...', total - 4, total - 3, total - 2, total - 1, total];
+            }
+            return [1, '...', current - 1, current, current + 1, '...', total];
+        },
+
         async init() {
             const board = await api.get('/api/v1/boards/' + boardCode);
             this.boardId = board.id;
@@ -460,13 +593,73 @@ function scoringApp(boardCode) {
         async loadAssessors() {
             this.assessors = asList(await api.get('/api/v1/boards/' + this.boardId + '/assessors'));
         },
-        async loadAssessments() {
-            this.assessments = asList(await api.get('/api/v1/boards/' + this.boardId + '/assessments'));
+
+        async loadAssessments(page = null) {
+            if (page !== null) {
+                this.assessmentsPage = page;
+            }
+            this.assessmentsLoading = true;
+            try {
+                const skip = (this.assessmentsPage - 1) * this.assessmentsPageSize;
+                const params = new URLSearchParams({
+                    skip: skip,
+                    limit: this.assessmentsPageSize
+                });
+                if (this.assessmentStatusFilter) params.append('status', this.assessmentStatusFilter);
+                if (this.assessmentSearch && this.assessmentSearch.trim()) params.append('search', this.assessmentSearch.trim());
+
+                const res = await api.get('/api/v1/boards/' + this.boardId + '/assessments?' + params.toString());
+                if (res && Array.isArray(res.items)) {
+                    this.assessments = res.items;
+                    this.assessmentsTotal = res.total ?? res.items.length;
+                } else if (Array.isArray(res)) {
+                    this.assessments = res;
+                    this.assessmentsTotal = res.length;
+                } else {
+                    this.assessments = [];
+                    this.assessmentsTotal = 0;
+                }
+
+                if (this.assessmentsPage > this.totalPages && this.totalPages > 0) {
+                    this.assessmentsPage = this.totalPages;
+                    await this.loadAssessments();
+                }
+            } catch (err) {
+                console.error("Failed to load assessments:", err);
+            } finally {
+                this.assessmentsLoading = false;
+            }
+        },
+
+        changePageSize(newSize) {
+            this.assessmentsPageSize = parseInt(newSize, 10);
+            this.assessmentsPage = 1;
+            this.loadAssessments();
+        },
+
+        goToPage(p) {
+            if (p < 1 || p > this.totalPages || p === this.assessmentsPage) return;
+            this.loadAssessments(p);
+        },
+
+        prevPage() {
+            if (this.assessmentsPage > 1) {
+                this.goToPage(this.assessmentsPage - 1);
+            }
+        },
+
+        nextPage() {
+            if (this.assessmentsPage < this.totalPages) {
+                this.goToPage(this.assessmentsPage + 1);
+            }
+        },
+
+        onFilterChange() {
+            this.assessmentsPage = 1;
+            this.loadAssessments();
         },
 
         // Manual status transitions (state machine mirrors the backend VALID_TRANSITIONS).
-        // PENDING_FEEDBACK -> SCORED normally happens automatically on calculate-score,
-        // so the button that mattered most (SCORED -> CLOSED) previously had no UI at all.
         statusFlow: {
             IN_PROGRESS:      { next: 'PENDING_FEEDBACK', label: 'Mark Pending' },
             PENDING_FEEDBACK: { next: 'SCORED',           label: 'Mark Scored' },
@@ -491,7 +684,7 @@ function scoringApp(boardCode) {
             }
             await api.post('/api/v1/boards/' + this.boardId + '/assessments', this.newAssessment);
             this.newAssessment = { assessment_type: 'Initial', application_id: '', organization_name: '', scheme: '', assessment_date: '' };
-            await this.loadAssessments();
+            await this.loadAssessments(1);
         },
 
         async registerAssessor() {

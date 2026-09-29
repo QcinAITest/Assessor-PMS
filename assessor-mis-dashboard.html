@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Assessor Performance MIS Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --navy: #1B2A4A;
+    --navy-light: #253A5E;
+    --navy-dark: #0F1C33;
+    --teal: #00838F;
+    --teal-light: #4DB6AC;
+    --cyan: #26C6DA;
+    --cyan-pale: #E0F7FA;
+    --gray-50: #F8F9FA;
+    --gray-100: #ECEFF1;
+    --gray-200: #CFD8DC;
+    --gray-400: #90A4AE;
+    --gray-600: #546E7A;
+    --gray-800: #37474F;
+    --white: #FFFFFF;
+    --green: #2E7D32;
+    --green-light: #E8F5E9;
+    --amber: #F57F17;
+    --amber-light: #FFF8E1;
+    --red: #C62828;
+    --red-light: #FFEBEE;
+    --blue-accent: #1565C0;
+    --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  *, *::before, *::after { box-sizing: inherit; margin: 0; padding: 0; }
+  body {
+    font-family: var(--font);
+    background: var(--gray-50);
+    color: var(--gray-800);
+    font-size: 14px;
+    line-height: 1.5;
+    height: 100%;
+  }
+
+  /* Top Bar */
+  .topbar {
+    background: var(--navy);
+    color: var(--white);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    position: sticky;
+    top: env(safe-area-inset-top, 0px);
+    z-index: 100;
+  }
+  .topbar-left { display: flex; align-items: baseline; gap: 12px; }
+  .topbar h1 { font-size: 18px; font-weight: 600; letter-spacing: 0.3px; }
+  .topbar .subtitle { font-size: 12px; color: var(--cyan); font-weight: 400; }
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .filters select {
+    background: var(--navy-light);
+    color: var(--white);
+    border: 1px solid rgba(255,255,255,0.15);
+    padding: 6px 28px 6px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: var(--font);
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2390A4AE'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+  }
+  .filters select:focus { outline: 2px solid var(--cyan); }
+
+  /* Layout */
+  .container { max-width: 1360px; margin: 0 auto; padding: 20px 24px 40px; }
+
+  /* Section headers */
+  .section-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--navy);
+    margin: 28px 0 14px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid var(--teal);
+    display: inline-block;
+  }
+  .section-title:first-of-type { margin-top: 0; }
+
+  /* KPI Cards row */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+    gap: 14px;
+    margin-bottom: 8px;
+  }
+  .kpi-card {
+    background: var(--white);
+    border-radius: 6px;
+    padding: 16px 18px;
+    border-left: 4px solid var(--teal);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .kpi-card.navy { border-left-color: var(--navy); }
+  .kpi-card.green { border-left-color: var(--green); }
+  .kpi-card.amber { border-left-color: var(--amber); }
+  .kpi-card.red { border-left-color: var(--red); }
+  .kpi-card.blue { border-left-color: var(--blue-accent); }
+  .kpi-label { font-size: 11px; color: var(--gray-600); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .kpi-value { font-size: 28px; font-weight: 700; color: var(--navy); line-height: 1.1; }
+  .kpi-sub { font-size: 11px; color: var(--gray-400); margin-top: 4px; }
+  .kpi-value .unit { font-size: 16px; font-weight: 400; }
+  .kpi-trend { font-size: 11px; margin-top: 2px; }
+  .kpi-trend.up { color: var(--green); }
+  .kpi-trend.down { color: var(--red); }
+
+  /* Grid layouts */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 8px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 8px; }
+  .grid-2-1 { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 8px; }
+  .grid-1-2 { display: grid; grid-template-columns: 1fr 2fr; gap: 16px; margin-bottom: 8px; }
+
+  /* Cards */
+  .card {
+    background: var(--white);
+    border-radius: 6px;
+    padding: 18px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .card-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--navy);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .card-title .badge {
+    font-size: 10px;
+    background: var(--cyan-pale);
+    color: var(--teal);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 500;
+  }
+
+  /* Tables */
+  .tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .tbl th {
+    text-align: left;
+    padding: 8px 10px;
+    background: var(--navy);
+    color: var(--white);
+    font-weight: 500;
+    font-size: 11px;
+    position: sticky;
+    top: 0;
+  }
+  .tbl th:first-child { border-radius: 4px 0 0 0; }
+  .tbl th:last-child { border-radius: 0 4px 0 0; }
+  .tbl td { padding: 7px 10px; border-bottom: 1px solid var(--gray-100); }
+  .tbl tr:hover td { background: var(--cyan-pale); }
+  .tbl .num { text-align: right; font-variant-numeric: tabular-nums; }
+
+  /* Rating pills */
+  .pill {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .pill.high { background: var(--green-light); color: var(--green); }
+  .pill.mid { background: var(--amber-light); color: var(--amber); }
+  .pill.low { background: var(--red-light); color: var(--red); }
+
+  /* Rating bar */
+  .rating-bar-wrap { display: flex; align-items: center; gap: 6px; }
+  .rating-bar { height: 6px; border-radius: 3px; background: var(--gray-100); flex: 1; max-width: 80px; }
+  .rating-bar-fill { height: 100%; border-radius: 3px; }
+  .rating-bar-fill.high { background: var(--green); }
+  .rating-bar-fill.mid { background: var(--amber); }
+  .rating-bar-fill.low { background: var(--red); }
+
+  /* Scrollable table wrapper */
+  .tbl-wrap { overflow-x: auto; }
+
+  /* Chart canvases */
+  canvas { max-width: 100%; }
+
+  /* Tabs */
+  .tab-bar { display: flex; gap: 0; margin-bottom: 14px; border-bottom: 2px solid var(--gray-100); }
+  .tab-btn {
+    padding: 8px 16px;
+    font-size: 12px;
+    font-family: var(--font);
+    background: none;
+    border: none;
+    color: var(--gray-600);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    font-weight: 500;
+  }
+  .tab-btn.active { color: var(--teal); border-bottom-color: var(--teal); }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .grid-2, .grid-3, .grid-2-1, .grid-1-2 { grid-template-columns: 1fr; }
+    .topbar { flex-direction: column; align-items: flex-start; }
+  }
+  @media (max-width: 600px) {
+    .kpi-row { grid-template-columns: 1fr 1fr; }
+    .container { padding: 12px; }
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --gray-50: #121B24;
+      --gray-100: #1C2833;
+      --gray-200: #263545;
+      --gray-400: #6A8494;
+      --gray-600: #A0B4BF;
+      --gray-800: #D5DEE3;
+      --white: #1A2535;
+      --cyan-pale: #0D2D33;
+    }
+  }
+  :root[data-theme="dark"] {
+    --gray-50: #121B24;
+    --gray-100: #1C2833;
+    --gray-200: #263545;
+    --gray-400: #6A8494;
+    --gray-600: #A0B4BF;
+    --gray-800: #D5DEE3;
+    --white: #1A2535;
+    --cyan-pale: #0D2D33;
+  }
+</style>
+</head>
+<body>
+
+<!-- Top Bar -->
+<div class="topbar">
+  <div class="topbar-left">
+    <h1>Assessor Performance MIS</h1>
+    <span class="subtitle">Quality Council of India</span>
+  </div>
+  <div class="filters">
+    <select id="filterBoard">
+      <option value="all">All Boards</option>
+      <option value="nabh">NABH</option>
+      <option value="nabl">NABL</option>
+      <option value="nabcb">NABCB</option>
+    </select>
+    <select id="filterRegion">
+      <option value="all">All Regions</option>
+      <option value="north">North</option>
+      <option value="south">South</option>
+      <option value="east">East</option>
+      <option value="west">West</option>
+      <option value="ne">North-East</option>
+    </select>
+    <select id="filterScope">
+      <option value="all">All Service Lines</option>
+      <option value="hospital">Hospital</option>
+      <option value="shco">SHCO</option>
+      <option value="testing">Testing</option>
+      <option value="calibration">Calibration</option>
+      <option value="medical">Medical</option>
+    </select>
+    <select id="filterPeriod">
+      <option value="ytd">FY 2026-27 (YTD)</option>
+      <option value="q1">Q1 (Apr–Jun)</option>
+      <option value="q2">Q2 (Jul–Sep)</option>
+      <option value="fy26">FY 2025-26</option>
+    </select>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- ====== HEADLINE KPIs ====== -->
+  <div class="section-title">Overview</div>
+  <div class="kpi-row">
+    <div class="kpi-card navy">
+      <div class="kpi-label">Total Assessments</div>
+      <div class="kpi-value">2,847</div>
+      <div class="kpi-trend up">↑ 12% vs. prior period</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Avg Assessor Rating</div>
+      <div class="kpi-value">3.82 <span class="unit">/ 5</span></div>
+      <div class="kpi-trend up">↑ 0.14 vs. prior period</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-label">Feedback Coverage</div>
+      <div class="kpi-value">78<span class="unit">%</span></div>
+      <div class="kpi-sub">2,221 of 2,847 forms received</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-label">High Performers (≥4)</div>
+      <div class="kpi-value">41<span class="unit">%</span></div>
+      <div class="kpi-sub">312 of 762 assessors</div>
+    </div>
+    <div class="kpi-card amber">
+      <div class="kpi-label">Needs Improvement (3–3.5)</div>
+      <div class="kpi-value">34<span class="unit">%</span></div>
+      <div class="kpi-sub">259 assessors</div>
+    </div>
+    <div class="kpi-card red">
+      <div class="kpi-label">At-Risk (&lt;3)</div>
+      <div class="kpi-value">9<span class="unit">%</span></div>
+      <div class="kpi-sub">69 assessors flagged</div>
+    </div>
+    <div class="kpi-card blue">
+      <div class="kpi-label">Active Assessor Pool</div>
+      <div class="kpi-value">762</div>
+      <div class="kpi-sub">Across NABH, NABL, NABCB</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Avg Feedback Turnaround</div>
+      <div class="kpi-value">4.2 <span class="unit">days</span></div>
+      <div class="kpi-trend down">↓ 1.1 days vs. prior</div>
+    </div>
+  </div>
+
+  <!-- ====== RATING DISTRIBUTION + BOARD-WISE ====== -->
+  <div class="section-title">Rating Distribution &amp; Board-wise Analysis</div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Rating Distribution (All Boards) <span class="badge">n = 2,221</span></div>
+      <canvas id="chartDistribution" height="220"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title">Average Rating by Board</div>
+      <canvas id="chartBoardAvg" height="220"></canvas>
+    </div>
+  </div>
+
+  <!-- Board-wise detail table -->
+  <div class="card" style="margin-bottom:8px;">
+    <div class="card-title">Board-wise Summary</div>
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Board</th>
+            <th class="num">Assessments</th>
+            <th class="num">Feedback Received</th>
+            <th class="num">Coverage %</th>
+            <th class="num">Avg Rating</th>
+            <th class="num">≥4 Stars</th>
+            <th class="num">&lt;3 Stars</th>
+            <th class="num">Active Assessors</th>
+            <th>Trend (QoQ)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>NABH</strong></td>
+            <td class="num">1,420</td>
+            <td class="num">1,136</td>
+            <td class="num">80%</td>
+            <td class="num"><span class="pill high">3.91</span></td>
+            <td class="num">44%</td>
+            <td class="num">7%</td>
+            <td class="num">385</td>
+            <td><span class="kpi-trend up">↑ 0.18</span></td>
+          </tr>
+          <tr>
+            <td><strong>NABL</strong></td>
+            <td class="num">1,095</td>
+            <td class="num">833</td>
+            <td class="num">76%</td>
+            <td class="num"><span class="pill mid">3.72</span></td>
+            <td class="num">37%</td>
+            <td class="num">11%</td>
+            <td class="num">298</td>
+            <td><span class="kpi-trend up">↑ 0.09</span></td>
+          </tr>
+          <tr>
+            <td><strong>NABCB</strong></td>
+            <td class="num">332</td>
+            <td class="num">252</td>
+            <td class="num">76%</td>
+            <td class="num"><span class="pill mid">3.68</span></td>
+            <td class="num">35%</td>
+            <td class="num">12%</td>
+            <td class="num">79</td>
+            <td><span class="kpi-trend down">↓ 0.05</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ====== REGION-WISE ====== -->
+  <div class="section-title">Region / Zone-wise Performance</div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Average Rating by Region</div>
+      <canvas id="chartRegion" height="240"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title">Region-wise Detail</div>
+      <div class="tbl-wrap">
+        <table class="tbl">
+          <thead>
+            <tr><th>Region</th><th class="num">Assessments</th><th class="num">Avg Rating</th><th class="num">Coverage %</th><th class="num">At-Risk %</th><th>Trend</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>North</td><td class="num">724</td><td class="num"><span class="pill high">3.94</span></td><td class="num">82%</td><td class="num">6%</td><td><span class="kpi-trend up">↑</span></td></tr>
+            <tr><td>South</td><td class="num">698</td><td class="num"><span class="pill high">3.88</span></td><td class="num">80%</td><td class="num">8%</td><td><span class="kpi-trend up">↑</span></td></tr>
+            <tr><td>West</td><td class="num">612</td><td class="num"><span class="pill mid">3.79</span></td><td class="num">76%</td><td class="num">10%</td><td><span class="kpi-trend up">↑</span></td></tr>
+            <tr><td>East</td><td class="num">498</td><td class="num"><span class="pill mid">3.64</span></td><td class="num">72%</td><td class="num">13%</td><td><span class="kpi-trend down">↓</span></td></tr>
+            <tr><td>North-East</td><td class="num">315</td><td class="num"><span class="pill mid">3.58</span></td><td class="num">68%</td><td class="num">15%</td><td><span class="kpi-trend down">↓</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- State-level heatmap table -->
+  <div class="card" style="margin-bottom:8px;">
+    <div class="card-title">Top 10 States by Volume <span class="badge">Sorted by assessments</span></div>
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead><tr><th>State</th><th>Region</th><th class="num">Assessments</th><th class="num">Avg Rating</th><th class="num">Coverage</th><th>Rating</th></tr></thead>
+        <tbody>
+          <tr><td>Maharashtra</td><td>West</td><td class="num">342</td><td class="num">3.84</td><td class="num">81%</td><td><div class="rating-bar-wrap"><div class="rating-bar"><div class="rating-bar-fill high" style="width:77%"></div></div></div></td></tr>
+          <tr><td>Tamil Nadu</td><td>South</td><td class="num">278</td><td class="num">3.92</td><td class="num">83%</td><td><div class="rating-bar-wrap"><div class="rating-bar"><div class="rating-bar-fill high" style="width:78%"></div></div></div></td></tr>
+          <tr><td>Delhi NCR</td><td>North</td><td class="num">256</td><td class="num">3.98</td><td class="num">85%</td><td><div class="rating-bar-wrap"><div class="rating-bar"><div class="rating-bar-fill high" style="width:80%"></div></div></div></td></tr>
+          <tr><td>Karnataka</td><td>South</td><td class="num">234</td><td class="num">3.86</td><td class="num">79%</td><td><div class="rating-bar-wrap"><div class="rating-bar"><div class="rating-bar-fill high" style="width:77%"></div></div></div></td></tr>
+          <tr><td>Uttar Pradesh</td><td>North</td><td class="num">218</td><td class="num">3.71</td><td class="num">74%</td><td><div class="rating-bar-wrap"><div class="rating-bar"><div class="rating-bar-fill mid" style="width:74%"></div></div></div></td></tr>
+          <tr><td>Gujarat</td><td>West</td><td class="num">195</td><td class="num">3.76</td><td class="num">76%</td><td><div class="rating-bar-wrap"><div class="rating-bar"><div class="rating-bar-fill mid" style="width:75%"></div></div></div></td></tr>
+          <tr><td>West Bengal</td><td>East</td><td class="num">172</td><td class="num">3.62</td><td class="num">71%</td><td><div class="rating-bar-wrap"><div class="rating-bar"><div class="rating-bar-fill mid" style="width:72%"></div></div></div></td></tr>
+          <tr><td>Rajasthan</td><td>North</td><td class="num">156</td><td class="num">3.80</td><td class="num">78%</td><td><div class="rating-bar-wrap"><div class="rating-bar"><div class="rating-bar-fill mid" style="width:76%"></div></div></div></td></tr>
+          <tr><td>Kerala</td><td>South</td><td class="num">148</td><td class="num">3.95</td><td class="num">84%</td><td><div class="rating-bar-wrap"><div class="rating-bar"><div class="rating-bar-fill high" style="width:79%"></div></div></div></td></tr>
+          <tr><td>Telangana</td><td>South</td><td class="num">138</td><td class="num">3.82</td><td class="num">77%</td><td><div class="rating-bar-wrap"><div class="rating-bar"><div class="rating-bar-fill mid" style="width:76%"></div></div></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ====== SERVICE LINE / SCOPE ====== -->
+  <div class="section-title">Service Line / Scope Analysis</div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Rating by Service Line</div>
+      <canvas id="chartServiceLine" height="260"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title">Service Line Detail</div>
+      <div class="tbl-wrap">
+        <table class="tbl">
+          <thead><tr><th>Board</th><th>Service Line</th><th class="num">Assessments</th><th class="num">Avg Rating</th><th class="num">High %</th><th class="num">At-Risk %</th></tr></thead>
+          <tbody>
+            <tr><td>NABH</td><td>Hospital</td><td class="num">612</td><td class="num"><span class="pill high">3.96</span></td><td class="num">48%</td><td class="num">5%</td></tr>
+            <tr><td>NABH</td><td>SHCO</td><td class="num">384</td><td class="num"><span class="pill high">3.88</span></td><td class="num">42%</td><td class="num">8%</td></tr>
+            <tr><td>NABH</td><td>Blood Bank</td><td class="num">198</td><td class="num"><span class="pill mid">3.74</span></td><td class="num">36%</td><td class="num">10%</td></tr>
+            <tr><td>NABH</td><td>Dental</td><td class="num">126</td><td class="num"><span class="pill high">3.90</span></td><td class="num">43%</td><td class="num">7%</td></tr>
+            <tr><td>NABH</td><td>AYUSH</td><td class="num">100</td><td class="num"><span class="pill mid">3.78</span></td><td class="num">38%</td><td class="num">9%</td></tr>
+            <tr><td>NABL</td><td>Testing</td><td class="num">468</td><td class="num"><span class="pill mid">3.76</span></td><td class="num">38%</td><td class="num">10%</td></tr>
+            <tr><td>NABL</td><td>Calibration</td><td class="num">312</td><td class="num"><span class="pill mid">3.68</span></td><td class="num">34%</td><td class="num">12%</td></tr>
+            <tr><td>NABL</td><td>Medical</td><td class="num">315</td><td class="num"><span class="pill mid">3.72</span></td><td class="num">36%</td><td class="num">11%</td></tr>
+            <tr><td>NABCB</td><td>QMS</td><td class="num">148</td><td class="num"><span class="pill mid">3.70</span></td><td class="num">35%</td><td class="num">12%</td></tr>
+            <tr><td>NABCB</td><td>EMS</td><td class="num">104</td><td class="num"><span class="pill mid">3.64</span></td><td class="num">33%</td><td class="num">14%</td></tr>
+            <tr><td>NABCB</td><td>FSMS</td><td class="num">80</td><td class="num"><span class="pill mid">3.66</span></td><td class="num">34%</td><td class="num">13%</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== ASSESSMENT TYPE ====== -->
+  <div class="section-title">Assessment Type Analysis</div>
+  <div class="grid-3">
+    <div class="card">
+      <div class="card-title">By Assessment Type</div>
+      <canvas id="chartAssessType" height="200"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title">Assessor Tenure vs. Rating</div>
+      <canvas id="chartTenure" height="200"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title">Workload vs. Rating</div>
+      <canvas id="chartWorkload" height="200"></canvas>
+    </div>
+  </div>
+
+  <!-- ====== TREND ====== -->
+  <div class="section-title">Rating Trends</div>
+  <div class="grid-2-1">
+    <div class="card">
+      <div class="card-title">Monthly Average Rating Trend</div>
+      <canvas id="chartTrend" height="220"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title">Coverage Trend (Monthly)</div>
+      <canvas id="chartCoverage" height="220"></canvas>
+    </div>
+  </div>
+
+
+
+</div>
+
+<script>
+const NAVY = '#1B2A4A';
+const TEAL = '#00838F';
+const CYAN = '#26C6DA';
+const GREEN = '#2E7D32';
+const AMBER = '#F57F17';
+const RED = '#C62828';
+const GRAY = '#90A4AE';
+const TEAL_LIGHT = '#4DB6AC';
+const BLUE = '#1565C0';
+
+Chart.defaults.font.family = "'Segoe UI', system-ui, sans-serif";
+Chart.defaults.font.size = 11;
+Chart.defaults.color = '#546E7A';
+
+// Rating Distribution
+new Chart(document.getElementById('chartDistribution'), {
+  type: 'bar',
+  data: {
+    labels: ['1 (Poor)', '2 (Below Avg)', '3 (Average)', '4 (Good)', '5 (Excellent)'],
+    datasets: [{
+      data: [42, 158, 644, 824, 553],
+      backgroundColor: [RED, AMBER, GRAY, TEAL, GREEN],
+      borderRadius: 3,
+      barPercentage: 0.65
+    }]
+  },
+  options: {
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { beginAtZero: true, title: { display: true, text: 'Assessors' } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+// Board Average
+new Chart(document.getElementById('chartBoardAvg'), {
+  type: 'bar',
+  data: {
+    labels: ['NABH', 'NABL', 'NABCB'],
+    datasets: [
+      { label: 'Current Period', data: [3.91, 3.72, 3.68], backgroundColor: TEAL, borderRadius: 3, barPercentage: 0.5 },
+      { label: 'Prior Period', data: [3.73, 3.63, 3.73], backgroundColor: GRAY, borderRadius: 3, barPercentage: 0.5 }
+    ]
+  },
+  options: {
+    plugins: { legend: { position: 'bottom', labels: { boxWidth: 10 } } },
+    scales: {
+      y: { min: 3.0, max: 4.5, title: { display: true, text: 'Avg Rating' } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+// Region chart
+new Chart(document.getElementById('chartRegion'), {
+  type: 'bar',
+  data: {
+    labels: ['North', 'South', 'West', 'East', 'North-East'],
+    datasets: [
+      { label: 'Avg Rating', data: [3.94, 3.88, 3.79, 3.64, 3.58], backgroundColor: [TEAL, TEAL, TEAL_LIGHT, AMBER, AMBER], borderRadius: 3, barPercentage: 0.55 }
+    ]
+  },
+  options: {
+    indexAxis: 'y',
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { min: 3.0, max: 4.5, title: { display: true, text: 'Avg Rating' } },
+      y: { grid: { display: false } }
+    }
+  }
+});
+
+// Service Line
+new Chart(document.getElementById('chartServiceLine'), {
+  type: 'bar',
+  data: {
+    labels: ['Hospital', 'SHCO', 'Blood Bank', 'Dental', 'AYUSH', 'Testing', 'Calibration', 'Medical', 'QMS', 'EMS', 'FSMS'],
+    datasets: [{
+      data: [3.96, 3.88, 3.74, 3.90, 3.78, 3.76, 3.68, 3.72, 3.70, 3.64, 3.66],
+      backgroundColor: [TEAL, TEAL, TEAL_LIGHT, TEAL, TEAL_LIGHT, CYAN, CYAN, CYAN, NAVY, NAVY, NAVY],
+      borderRadius: 3,
+      barPercentage: 0.6
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { min: 3.0, max: 4.5, title: { display: true, text: 'Avg Rating' } },
+      y: { grid: { display: false } }
+    }
+  }
+});
+
+// Assessment Type
+new Chart(document.getElementById('chartAssessType'), {
+  type: 'bar',
+  data: {
+    labels: ['Initial', 'Surveillance', 'Renewal'],
+    datasets: [
+      { label: 'NABH', data: [3.86, 3.94, 3.92], backgroundColor: TEAL, borderRadius: 3 },
+      { label: 'NABL', data: [3.64, 3.76, 3.74], backgroundColor: CYAN, borderRadius: 3 },
+      { label: 'NABCB', data: [3.58, 3.72, 3.68], backgroundColor: NAVY, borderRadius: 3 }
+    ]
+  },
+  options: {
+    plugins: { legend: { position: 'bottom', labels: { boxWidth: 10 } } },
+    scales: {
+      y: { min: 3.0, max: 4.5 },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+// Tenure vs Rating
+new Chart(document.getElementById('chartTenure'), {
+  type: 'bar',
+  data: {
+    labels: ['<1 yr', '1–3 yrs', '3–5 yrs', '5–10 yrs', '10+ yrs'],
+    datasets: [{
+      data: [3.48, 3.72, 3.88, 3.96, 4.02],
+      backgroundColor: [AMBER, TEAL_LIGHT, TEAL, TEAL, GREEN],
+      borderRadius: 3,
+      barPercentage: 0.6
+    }]
+  },
+  options: {
+    plugins: { legend: { display: false } },
+    scales: { y: { min: 3.0, max: 4.5 }, x: { grid: { display: false } } }
+  }
+});
+
+// Workload vs Rating (scatter)
+new Chart(document.getElementById('chartWorkload'), {
+  type: 'scatter',
+  data: {
+    datasets: [{
+      label: 'Assessors',
+      data: [
+        {x:4,y:4.2},{x:6,y:4.4},{x:8,y:4.1},{x:10,y:3.9},{x:12,y:3.8},
+        {x:14,y:3.7},{x:16,y:3.5},{x:18,y:3.6},{x:20,y:3.3},{x:22,y:3.1},
+        {x:24,y:2.9},{x:26,y:3.0},{x:5,y:3.8},{x:7,y:4.0},{x:9,y:3.9},
+        {x:11,y:3.7},{x:13,y:3.6},{x:15,y:3.8},{x:17,y:3.4},{x:19,y:3.2},
+        {x:3,y:3.5},{x:28,y:2.8},{x:30,y:2.6},{x:21,y:3.4},{x:25,y:3.1}
+      ],
+      backgroundColor: TEAL + '99',
+      pointRadius: 5
+    }]
+  },
+  options: {
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { title: { display: true, text: 'Assessments (YTD)' } },
+      y: { min: 2.0, max: 5.0, title: { display: true, text: 'Avg Rating' } }
+    }
+  }
+});
+
+// Monthly Trend
+new Chart(document.getElementById('chartTrend'), {
+  type: 'line',
+  data: {
+    labels: ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep'],
+    datasets: [
+      { label: 'NABH', data: [3.74, 3.78, 3.82, 3.86, 3.90, 3.91], borderColor: TEAL, backgroundColor: TEAL + '15', fill: true, tension: 0.3 },
+      { label: 'NABL', data: [3.62, 3.64, 3.66, 3.69, 3.71, 3.72], borderColor: CYAN, backgroundColor: CYAN + '15', fill: true, tension: 0.3 },
+      { label: 'NABCB', data: [3.72, 3.70, 3.68, 3.67, 3.68, 3.68], borderColor: NAVY, backgroundColor: NAVY + '15', fill: true, tension: 0.3 }
+    ]
+  },
+  options: {
+    plugins: { legend: { position: 'bottom', labels: { boxWidth: 10 } } },
+    scales: { y: { min: 3.4, max: 4.2 }, x: { grid: { display: false } } }
+  }
+});
+
+// Coverage Trend
+new Chart(document.getElementById('chartCoverage'), {
+  type: 'line',
+  data: {
+    labels: ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep'],
+    datasets: [{
+      label: 'Coverage %',
+      data: [68, 71, 74, 76, 77, 78],
+      borderColor: GREEN,
+      backgroundColor: GREEN + '15',
+      fill: true,
+      tension: 0.3
+    }]
+  },
+  options: {
+    plugins: { legend: { display: false } },
+    scales: { y: { min: 50, max: 100, title: { display: true, text: '%' } }, x: { grid: { display: false } } }
+  }
+});
+
+
+</script>
+</body>
+</html>
