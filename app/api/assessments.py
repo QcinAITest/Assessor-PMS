@@ -177,14 +177,61 @@ def submit_form(assessment_id: str, data: SubmissionCreate, db: Session = Depend
 
 
 @router.get("/assessments/{assessment_id}/submissions")
-def list_submissions(assessment_id: str, db: Session = Depends(get_db)):
-    subs = db.query(FormSubmission).filter(FormSubmission.assessment_id == assessment_id).all()
-    return [{
-        "id": s.id, "form_template_id": s.form_template_id,
-        "evaluator_id": s.evaluator_id, "evaluee_id": s.evaluee_id,
-        "form_score": s.form_score, "essential_flag": s.essential_flag,
-        "status": s.status, "submitted_at": s.submitted_at,
-    } for s in subs]
+def list_submissions(
+    assessment_id: str,
+    evaluee_id: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+):
+    query = db.query(FormSubmission).filter(FormSubmission.assessment_id == assessment_id)
+    if evaluee_id:
+        query = query.filter(FormSubmission.evaluee_id == evaluee_id)
+    subs = query.all()
+
+    assessment = db.query(Assessment).filter(Assessment.id == assessment_id).first()
+    raw_remark = None
+    if assessment and assessment.application_id and assessment.application_id.startswith("RAW-"):
+        try:
+            legacy_id = int(assessment.application_id.replace("RAW-", ""))
+            from app.models.raw_submission import RawFormSubmission
+            raw_sub = db.query(RawFormSubmission).filter(RawFormSubmission.legacy_id == legacy_id).first()
+            if raw_sub and raw_sub.other_remark:
+                raw_remark = raw_sub.other_remark
+        except Exception:
+            pass
+
+    result = []
+    for s in subs:
+        params_info = []
+        if s.form_template and s.form_template.parameters:
+            for p in s.form_template.parameters:
+                params_info.append({
+                    "code": p.code,
+                    "label": p.label,
+                    "weight": p.weight,
+                })
+
+        comments = s.comments or raw_remark
+        result.append({
+            "id": s.id,
+            "assessment_id": s.assessment_id,
+            "form_template_id": s.form_template_id,
+            "form_code": s.form_template.code if s.form_template else None,
+            "form_name": s.form_template.name if s.form_template else None,
+            "form_description": s.form_template.description if s.form_template else None,
+            "evaluator_id": s.evaluator_id,
+            "evaluator_name": s.evaluator.name if s.evaluator else (s.evaluator_email or "Peer Assessor"),
+            "evaluator_email": s.evaluator.email if s.evaluator else s.evaluator_email,
+            "evaluee_id": s.evaluee_id,
+            "evaluee_role": s.evaluee_role,
+            "form_score": s.form_score,
+            "essential_flag": s.essential_flag,
+            "responses": s.responses,
+            "comments": comments,
+            "parameters": params_info,
+            "status": s.status,
+            "submitted_at": s.submitted_at.isoformat() if s.submitted_at else None,
+        })
+    return result
 
 
 # --- Scoring ---
