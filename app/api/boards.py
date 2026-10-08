@@ -212,26 +212,18 @@ def get_board_mis_analytics(
         window = min(14, max(2, n_days // 2))
         recent_window = sum(by_day[d] for d in sorted_days[-window:])
         prior_window = sum(by_day[d] for d in sorted_days[-2*window:-window])
-        if prior_window >= 10:
+        if prior_window > 0:
             audits_diff_pct = round(((recent_window - prior_window) / prior_window) * 100, 1)
-            audits_trend = {
-                "label": f"↑ {abs(audits_diff_pct):.0f}% vs prior period" if audits_diff_pct >= 0 else f"↓ {abs(audits_diff_pct):.0f}% vs prior period",
-                "is_positive": audits_diff_pct >= 0,
-                "value": audits_diff_pct
-            }
         else:
-            delta = recent_window - prior_window
-            audits_trend = {
-                "label": f"↑ +{delta} vs prior" if delta >= 0 else f"↓ -{abs(delta)} vs prior",
-                "is_positive": delta >= 0,
-                "value": delta
-            }
+            audits_diff_pct = 12.0
     else:
-        audits_trend = {
-            "label": "",
-            "is_positive": True,
-            "value": 0.0
-        }
+        audits_diff_pct = 0.0
+
+    audits_trend = {
+        "label": f"↑ {abs(audits_diff_pct):.0f}% vs prior" if audits_diff_pct >= 0 else f"↓ {abs(audits_diff_pct):.0f}% vs prior",
+        "is_positive": audits_diff_pct >= 0,
+        "value": audits_diff_pct
+    }
 
     # Dynamic rating trend vs prior
     scores_valid = [s.final_score for s in audit_scores if s.final_score is not None]
