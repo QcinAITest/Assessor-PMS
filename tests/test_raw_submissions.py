@@ -20,6 +20,12 @@ SAMPLE_PAYLOAD = [
     "user_name": "Ms.Jalpa Krishna Kumar Raichura",
     "other_remark": "PA to Ms.Jalpa Krishna Kumar Raichura",
     "role": "Observer",
+    "qualification": "M.Sc Nursing",
+    "designation": "Quality Manager",
+    "specialization": "Clinical Audit",
+    "experience": "12 Years",
+    "state": "Gujarat",
+    "city": "Rajkot",
     "submitted_at": "2026-04-10 14:30:00"
   },
   {
@@ -35,6 +41,12 @@ SAMPLE_PAYLOAD = [
     "user_name": "Dr Muthu Bharathi S",
     "other_remark": "PA to Dr Muthu Bharathi S",
     "role": "Assessor",
+    "qualification": "MBBS, MD",
+    "designation": "Medical Superintendent",
+    "specialization": "Healthcare Management",
+    "experience": "15 Years",
+    "state": "Tamil Nadu",
+    "city": "Chennai",
     "submitted_at": "2026-04-11T10:00:00Z"
   },
   {
@@ -49,7 +61,9 @@ SAMPLE_PAYLOAD = [
     ],
     "user_name": "",
     "other_remark": "PA to HCO",
-    "hospital_name": "Sgs Super Speciality Hospital(run By Shree Hari Arogyam Foundation)"
+    "hospital_name": "Sgs Super Speciality Hospital(run By Shree Hari Arogyam Foundation)",
+    "state": "Maharashtra",
+    "city": "Pune"
   }
 ]
 
@@ -62,43 +76,64 @@ async def test_create_raw_submissions_bulk():
         data = response.json()
         assert data["status"] == "success"
         assert data["saved_count"] == 3
-        assert len(data["saved_ids"]) == 3
+        saved_ids = data["saved_ids"]
+        assert len(saved_ids) == 3
+
+        # Clean up test records immediately
+        for sid in saved_ids:
+            del_res = await ac.delete(f"/api/v1/raw-submissions/{sid}")
+            assert del_res.status_code == 200
 
 
 @pytest.mark.anyio
 async def test_get_raw_submissions_and_filter():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         # Seed test items
-        await ac.post("/api/v1/raw-submissions", json=SAMPLE_PAYLOAD)
+        create_res = await ac.post("/api/v1/raw-submissions", json=SAMPLE_PAYLOAD)
+        saved_ids = create_res.json()["saved_ids"]
 
-        # 1. Fetch all
-        response = await ac.get("/api/v1/raw-submissions")
-        assert response.status_code == 200
-        res = response.json()
-        assert res["total_count"] >= 3
+        try:
+            # 1. Fetch all
+            response = await ac.get("/api/v1/raw-submissions")
+            assert response.status_code == 200
+            res = response.json()
+            assert res["total_count"] >= 3
 
-        # 2. Filter by role
-        res_role = await ac.get("/api/v1/raw-submissions?role=Observer")
-        assert res_role.status_code == 200
-        role_items = res_role.json()["items"]
-        assert len(role_items) >= 1
-        assert role_items[0]["role"] == "Observer"
+            # 2. Filter by role
+            res_role = await ac.get("/api/v1/raw-submissions?role=Observer")
+            assert res_role.status_code == 200
+            role_items = res_role.json()["items"]
+            assert len(role_items) >= 1
+            assert role_items[0]["role"] == "Observer"
 
-        # 3. Filter by legacy_id
-        res_legacy = await ac.get("/api/v1/raw-submissions?legacy_id=879")
-        assert res_legacy.status_code == 200
-        legacy_items = res_legacy.json()["items"]
-        assert len(legacy_items) >= 1
-        assert legacy_items[0]["legacy_id"] == 879
-        assert legacy_items[0]["user_name"] == "Ms.Jalpa Krishna Kumar Raichura"
-        assert legacy_items[0]["submitted_at"] is not None
+            # 3. Filter by legacy_id
+            res_legacy = await ac.get("/api/v1/raw-submissions?legacy_id=879")
+            assert res_legacy.status_code == 200
+            legacy_items = res_legacy.json()["items"]
+            assert len(legacy_items) >= 1
+            assert legacy_items[0]["legacy_id"] == 879
+            assert legacy_items[0]["user_name"] == "Ms.Jalpa Krishna Kumar Raichura"
+            assert legacy_items[0]["submitted_at"] is not None
 
-        # 4. Filter by hospital_name partial match
-        res_hosp = await ac.get("/api/v1/raw-submissions?hospital_name=Super Speciality")
-        assert res_hosp.status_code == 200
-        hosp_items = res_hosp.json()["items"]
-        assert len(hosp_items) >= 1
-        assert "Sgs Super Speciality" in hosp_items[0]["hospital_name"]
+            # 4. Filter by hospital_name partial match
+            res_hosp = await ac.get("/api/v1/raw-submissions?hospital_name=Super Speciality")
+            assert res_hosp.status_code == 200
+            hosp_items = res_hosp.json()["items"]
+            assert len(hosp_items) >= 1
+            assert "Sgs Super Speciality" in hosp_items[0]["hospital_name"]
+
+            # 5. Filter by state
+            res_state = await ac.get("/api/v1/raw-submissions?state=Gujarat")
+            assert res_state.status_code == 200
+            state_items = res_state.json()["items"]
+            assert len(state_items) >= 1
+            assert state_items[0]["state"] == "Gujarat"
+            assert state_items[0]["city"] == "Rajkot"
+            assert state_items[0]["qualification"] == "M.Sc Nursing"
+        finally:
+            # Clean up all created test records
+            for sid in saved_ids:
+                await ac.delete(f"/api/v1/raw-submissions/{sid}")
 
 
 @pytest.mark.anyio
@@ -109,6 +144,12 @@ async def test_get_single_raw_submission_and_update():
             "id": 9999,
             "user_name": "Test User",
             "role": "Lead Assessor",
+            "qualification": "Ph.D",
+            "designation": "Director",
+            "specialization": "Laboratory Medicine",
+            "experience": "20 Years",
+            "state": "Maharashtra",
+            "city": "Mumbai",
             "form": [[{"rating": "5", "comment": "Excellent"}]],
             "board_code": "NABL"
         }
@@ -121,12 +162,17 @@ async def test_get_single_raw_submission_and_update():
         assert get_res.status_code == 200
         assert get_res.json()["user_name"] == "Test User"
         assert get_res.json()["board_code"] == "NABL"
-        assert get_res.json()["is_processed"] is False
+        assert get_res.json()["qualification"] == "Ph.D"
+        assert get_res.json()["designation"] == "Director"
+        assert get_res.json()["specialization"] == "Laboratory Medicine"
+        assert get_res.json()["state"] == "Maharashtra"
+        assert get_res.json()["city"] == "Mumbai"
 
-        # Update process flag
-        patch_res = await ac.patch(f"/api/v1/raw-submissions/{created_id}", json={"is_processed": True})
+        # Update via patch
+        patch_res = await ac.patch(f"/api/v1/raw-submissions/{created_id}", json={"city": "Pune", "qualification": "PostDoc"})
         assert patch_res.status_code == 200
-        assert patch_res.json()["is_processed"] is True
+        assert patch_res.json()["city"] == "Pune"
+        assert patch_res.json()["qualification"] == "PostDoc"
 
         # Delete
         del_res = await ac.delete(f"/api/v1/raw-submissions/{created_id}")

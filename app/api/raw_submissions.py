@@ -79,6 +79,12 @@ class RawSubmissionInput(BaseModel):
     user_name: Optional[str] = Field(None, description="User / assessor / submitter name")
     role: Optional[str] = Field(None, description="Assessor or submitter role (e.g. Observer, Assessor, Principal Assessor)")
     hospital_name: Optional[str] = Field(None, description="Hospital or organization name (if applicable)")
+    qualification: Optional[str] = Field(None, description="Assessor qualification")
+    designation: Optional[str] = Field(None, description="Assessor designation")
+    specialization: Optional[str] = Field(None, description="Assessor specialization")
+    experience: Optional[Union[str, int, float]] = Field(None, description="Assessor experience")
+    state: Optional[str] = Field(None, description="State")
+    city: Optional[str] = Field(None, description="City")
     other_remark: Optional[str] = Field(None, description="Remarks or additional text")
     form: Optional[Any] = Field(None, description="Form data (e.g. nested 2D array of questions, ratings, comments)")
     form_data: Optional[Any] = Field(None, description="Alias for form")
@@ -100,6 +106,12 @@ class RawSubmissionResponse(BaseModel):
     user_name: Optional[str] = None
     role: Optional[str] = None
     hospital_name: Optional[str] = None
+    qualification: Optional[str] = None
+    designation: Optional[str] = None
+    specialization: Optional[str] = None
+    experience: Optional[str] = None
+    state: Optional[str] = None
+    city: Optional[str] = None
     other_remark: Optional[str] = None
     form_data: Any
     raw_payload: Optional[Any] = None
@@ -121,6 +133,12 @@ class RawSubmissionUpdate(BaseModel):
     user_name: Optional[str] = None
     role: Optional[str] = None
     hospital_name: Optional[str] = None
+    qualification: Optional[str] = None
+    designation: Optional[str] = None
+    specialization: Optional[str] = None
+    experience: Optional[str] = None
+    state: Optional[str] = None
+    city: Optional[str] = None
     other_remark: Optional[str] = None
     board_code: Optional[str] = None
 
@@ -285,6 +303,16 @@ def process_raw_submission_to_scorecard(db: Session, raw_sub: RawFormSubmission)
 
     # 1. Get or create Assessor
     assessor = _get_or_create_assessor(db, board, raw_sub.user_name, raw_sub.role)
+    meta = dict(assessor.metadata_ or {})
+    updated_meta = False
+    for k in ["qualification", "designation", "specialization", "experience", "state", "city"]:
+        val = getattr(raw_sub, k, None)
+        if val and meta.get(k) != val:
+            meta[k] = val
+            updated_meta = True
+    if updated_meta:
+        assessor.metadata_ = meta
+        db.flush()
 
     # 2. Compute score from 2D raw array
     form_score = _score_raw_matrix(raw_sub.form_data)
@@ -393,12 +421,27 @@ async def create_raw_submissions(
         sub_at = _parse_datetime(item.get("submitted_at") or item.get("created_at") or item.get("date"))
         is_proc = bool(item.get("is_processed", False))
 
+        qual = item.get("qualification") or item.get("Qualification") or None
+        desig = item.get("designation") or item.get("Designation") or None
+        spec = item.get("specialization") or item.get("Specialization") or None
+        exp = item.get("experience") or item.get("Experience") or None
+        if exp is not None:
+            exp = str(exp).strip()
+        state = item.get("state") or item.get("State") or None
+        city = item.get("city") or item.get("City") or None
+
         record = RawFormSubmission(
             legacy_id=leg_id,
             board_code=b_code,
             user_name=u_name,
             role=r_role,
             hospital_name=h_name,
+            qualification=qual,
+            designation=desig,
+            specialization=spec,
+            experience=exp,
+            state=state,
+            city=city,
             other_remark=o_remark,
             form_data=f_data,
             raw_payload=raw_p,
@@ -471,7 +514,11 @@ def get_raw_submissions(
     hospital_name: Optional[str] = Query(None, description="Partial match on hospital/organization name"),
     legacy_id: Optional[int] = Query(None, description="Filter by legacy ID"),
     is_processed: Optional[bool] = Query(None, description="Filter by processed status"),
-    search: Optional[str] = Query(None, description="Search across user_name, hospital_name, and other_remark"),
+    state: Optional[str] = Query(None, description="Filter by state"),
+    city: Optional[str] = Query(None, description="Filter by city"),
+    designation: Optional[str] = Query(None, description="Filter by designation"),
+    specialization: Optional[str] = Query(None, description="Filter by specialization"),
+    search: Optional[str] = Query(None, description="Search across user_name, hospital_name, remarks, location, specialization"),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(50, ge=1, le=500, description="Items per page (max 500)"),
     db: Session = Depends(get_db),
@@ -490,6 +537,14 @@ def get_raw_submissions(
         query = query.filter(RawFormSubmission.legacy_id == legacy_id)
     if is_processed is not None:
         query = query.filter(RawFormSubmission.is_processed == is_processed)
+    if state:
+        query = query.filter(RawFormSubmission.state.ilike(f"%{state}%"))
+    if city:
+        query = query.filter(RawFormSubmission.city.ilike(f"%{city}%"))
+    if designation:
+        query = query.filter(RawFormSubmission.designation.ilike(f"%{designation}%"))
+    if specialization:
+        query = query.filter(RawFormSubmission.specialization.ilike(f"%{specialization}%"))
     if search:
         pattern = f"%{search}%"
         query = query.filter(
@@ -497,6 +552,11 @@ def get_raw_submissions(
                 RawFormSubmission.user_name.ilike(pattern),
                 RawFormSubmission.hospital_name.ilike(pattern),
                 RawFormSubmission.other_remark.ilike(pattern),
+                RawFormSubmission.qualification.ilike(pattern),
+                RawFormSubmission.designation.ilike(pattern),
+                RawFormSubmission.specialization.ilike(pattern),
+                RawFormSubmission.state.ilike(pattern),
+                RawFormSubmission.city.ilike(pattern),
             )
         )
 

@@ -21,6 +21,12 @@ class RawFormSubmission(Base):
     user_name = Column(String(255), nullable=True, index=True)
     role = Column(String(100), nullable=True, index=True)
     hospital_name = Column(String(500), nullable=True)
+    qualification = Column(String(255), nullable=True)
+    designation = Column(String(255), nullable=True)
+    specialization = Column(String(255), nullable=True)
+    experience = Column(String(100), nullable=True)
+    state = Column(String(100), nullable=True)
+    city = Column(String(100), nullable=True)
     other_remark = Column(Text, nullable=True)
     form_data = Column(JSONB, nullable=False)
     raw_payload = Column(JSONB, nullable=True)
@@ -33,6 +39,8 @@ class RawFormSubmission(Base):
         Index("idx_raw_submissions_role", "role"),
         Index("idx_raw_submissions_user_name", "user_name"),
         Index("idx_raw_submissions_legacy_id", "legacy_id"),
+        Index("idx_raw_submissions_state", "state"),
+        Index("idx_raw_submissions_city", "city"),
         Index("idx_raw_submissions_submitted_at", "submitted_at"),
         Index("idx_raw_submissions_is_processed", "is_processed"),
     )

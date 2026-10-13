@@ -234,7 +234,25 @@ def _migrate_postgres():
         CREATE INDEX IF NOT EXISTS idx_raw_submissions_submitted_at ON raw_form_submissions(submitted_at);
         CREATE INDEX IF NOT EXISTS idx_raw_submissions_is_processed ON raw_form_submissions(is_processed);
     """)
-    print("raw_form_submissions: verified table & indexes (PostgreSQL)")
+
+    r_cols = columns("raw_form_submissions")
+    for col_name, col_type in [
+        ("qualification", "VARCHAR(255)"),
+        ("designation", "VARCHAR(255)"),
+        ("specialization", "VARCHAR(255)"),
+        ("experience", "VARCHAR(100)"),
+        ("state", "VARCHAR(100)"),
+        ("city", "VARCHAR(100)"),
+    ]:
+        if col_name not in r_cols:
+            cur.execute(f"ALTER TABLE raw_form_submissions ADD COLUMN {col_name} {col_type}")
+            print(f"raw_form_submissions.{col_name} added")
+
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_raw_submissions_state ON raw_form_submissions(state);
+        CREATE INDEX IF NOT EXISTS idx_raw_submissions_city ON raw_form_submissions(city);
+    """)
+    print("raw_form_submissions: verified table, columns & indexes (PostgreSQL)")
 
     conn.commit()
     cur.close()
@@ -439,7 +457,25 @@ def _migrate_sqlite():
         CREATE INDEX IF NOT EXISTS idx_raw_submissions_submitted_at ON raw_form_submissions(submitted_at);
         CREATE INDEX IF NOT EXISTS idx_raw_submissions_is_processed ON raw_form_submissions(is_processed);
     """)
-    print("raw_form_submissions: verified table & indexes (SQLite)")
+
+    r_cols = columns("raw_form_submissions")
+    for col_name, col_type in [
+        ("qualification", "VARCHAR(255)"),
+        ("designation", "VARCHAR(255)"),
+        ("specialization", "VARCHAR(255)"),
+        ("experience", "VARCHAR(100)"),
+        ("state", "VARCHAR(100)"),
+        ("city", "VARCHAR(100)"),
+    ]:
+        if col_name not in r_cols:
+            cur.execute(f"ALTER TABLE raw_form_submissions ADD COLUMN {col_name} {col_type}")
+            print(f"raw_form_submissions.{col_name} added")
+
+    cur.executescript("""
+        CREATE INDEX IF NOT EXISTS idx_raw_submissions_state ON raw_form_submissions(state);
+        CREATE INDEX IF NOT EXISTS idx_raw_submissions_city ON raw_form_submissions(city);
+    """)
+    print("raw_form_submissions: verified table, columns & indexes (SQLite)")
 
     conn.commit()
     conn.execute("PRAGMA foreign_keys = ON")
