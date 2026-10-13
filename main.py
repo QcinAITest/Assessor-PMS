@@ -48,6 +48,14 @@ def _ensure_schema():
         "parameters": {
             "applies_to_roles": "JSON",
         },
+        "raw_form_submissions": {
+            "qualification": "VARCHAR(255)",
+            "designation": "VARCHAR(255)",
+            "specialization": "VARCHAR(255)",
+            "experience": "VARCHAR(100)",
+            "state": "VARCHAR(100)",
+            "city": "VARCHAR(100)",
+        },
     }
     # Free-text columns that were originally VARCHAR(n) and overflowed on Postgres
     # (e.g. an auto-generated parameter code longer than 50 chars). Converting to
