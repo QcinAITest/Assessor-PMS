@@ -44,3 +44,8 @@ class RawFormSubmission(Base):
         Index("idx_raw_submissions_submitted_at", "submitted_at"),
         Index("idx_raw_submissions_is_processed", "is_processed"),
     )
+
+    @property
+    def lab_name(self):
+        """Alias for hospital_name for NABL laboratory submissions."""
+        return self.hospital_name

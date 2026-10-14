@@ -79,6 +79,7 @@ class RawSubmissionInput(BaseModel):
     user_name: Optional[str] = Field(None, description="User / assessor / submitter name")
     role: Optional[str] = Field(None, description="Assessor or submitter role (e.g. Observer, Assessor, Principal Assessor)")
     hospital_name: Optional[str] = Field(None, description="Hospital or organization name (if applicable)")
+    lab_name: Optional[str] = Field(None, description="Laboratory name (NABL alias for hospital_name)")
     qualification: Optional[str] = Field(None, description="Assessor qualification")
     designation: Optional[str] = Field(None, description="Assessor designation")
     specialization: Optional[str] = Field(None, description="Assessor specialization")
@@ -106,6 +107,7 @@ class RawSubmissionResponse(BaseModel):
     user_name: Optional[str] = None
     role: Optional[str] = None
     hospital_name: Optional[str] = None
+    lab_name: Optional[str] = None
     qualification: Optional[str] = None
     designation: Optional[str] = None
     specialization: Optional[str] = None
@@ -133,6 +135,7 @@ class RawSubmissionUpdate(BaseModel):
     user_name: Optional[str] = None
     role: Optional[str] = None
     hospital_name: Optional[str] = None
+    lab_name: Optional[str] = None
     qualification: Optional[str] = None
     designation: Optional[str] = None
     specialization: Optional[str] = None
@@ -298,7 +301,7 @@ def process_raw_submission_to_scorecard(db: Session, raw_sub: RawFormSubmission)
     if not raw_sub.user_name or not raw_sub.user_name.strip():
         return None
 
-    board_code = raw_sub.board_code or "NABH"
+    board_code = (raw_sub.board_code or "NABH").strip().upper()
     board, form_template = _ensure_board_and_template(db, board_code)
 
     # 1. Get or create Assessor
@@ -414,9 +417,36 @@ async def create_raw_submissions(
         f_data = item.get("form_data") if item.get("form_data") is not None else item.get("form", [])
         u_name = item.get("user_name") or None
         r_role = item.get("role") or None
-        h_name = item.get("hospital_name") or None
+
+        # Flexible board resolution (JSON field, query param, or header)
+        raw_b = (
+            item.get("board_code")
+            or item.get("board")
+            or item.get("Board")
+            or item.get("BoardCode")
+            or request.query_params.get("board_code")
+            or request.query_params.get("board")
+            or request.headers.get("X-Board-Code")
+            or request.headers.get("X-Board")
+        )
+        if raw_b and isinstance(raw_b, str) and raw_b.strip():
+            b_code = raw_b.strip().upper()
+        elif item.get("lab_name") or item.get("laboratory_name") or item.get("lab_id"):
+            b_code = "NABL"
+        elif item.get("hospital_name") or item.get("hco_name"):
+            b_code = "NABH"
+        else:
+            b_code = "NABH"
+
+        h_name = (
+            item.get("hospital_name")
+            or item.get("lab_name")
+            or item.get("laboratory_name")
+            or item.get("organization_name")
+            or item.get("hco_name")
+            or None
+        )
         o_remark = item.get("other_remark") or None
-        b_code = item.get("board_code") or "NABH"
         raw_p = item.get("raw_payload") or item
         sub_at = _parse_datetime(item.get("submitted_at") or item.get("created_at") or item.get("date"))
         is_proc = bool(item.get("is_processed", False))
@@ -512,6 +542,7 @@ def get_raw_submissions(
     role: Optional[str] = Query(None, description="Filter by role (e.g. Observer, Assessor)"),
     user_name: Optional[str] = Query(None, description="Partial or exact match on user/assessor name"),
     hospital_name: Optional[str] = Query(None, description="Partial match on hospital/organization name"),
+    lab_name: Optional[str] = Query(None, description="Partial match on laboratory name (NABL alias)"),
     legacy_id: Optional[int] = Query(None, description="Filter by legacy ID"),
     is_processed: Optional[bool] = Query(None, description="Filter by processed status"),
     state: Optional[str] = Query(None, description="Filter by state"),
@@ -526,13 +557,15 @@ def get_raw_submissions(
     query = db.query(RawFormSubmission)
 
     if board_code:
-        query = query.filter(RawFormSubmission.board_code == board_code)
+        query = query.filter(RawFormSubmission.board_code.ilike(board_code.strip()))
     if role:
         query = query.filter(RawFormSubmission.role == role)
     if user_name:
         query = query.filter(RawFormSubmission.user_name.ilike(f"%{user_name}%"))
     if hospital_name:
         query = query.filter(RawFormSubmission.hospital_name.ilike(f"%{hospital_name}%"))
+    if lab_name:
+        query = query.filter(RawFormSubmission.hospital_name.ilike(f"%{lab_name}%"))
     if legacy_id is not None:
         query = query.filter(RawFormSubmission.legacy_id == legacy_id)
     if is_processed is not None:
